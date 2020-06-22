@@ -2,7 +2,9 @@ import chalk from 'chalk';
 import log from 'electron-log';
 import { EventEmitter } from 'events';
 import readline, { createInterface } from 'readline';
+import { db } from '.';
 import { Connector } from './Connector';
+import { sleep } from './utils/sleep';
 
 export class InputTaker extends EventEmitter {
   private rl: readline.Interface;
@@ -25,13 +27,24 @@ export class InputTaker extends EventEmitter {
     return this.rl;
   }
 
-  private init() {
+  private async init() {
     this.rl.on('SIGINT', this.shutdown);
     process.on('SIGINT', this.shutdown);
     this.rl.question('', this.handleCommand);
+
+    while (!db.ready) {
+      await sleep(500);
+    }
+
+    log.info(
+      `Please enter a command. (Use ${chalk.bold('help')} to see the menu)`
+    );
   }
 
   private shutdown() {
+    if (this.connector) {
+      this.connector.close();
+    }
     log.info('Thanks for stopping by');
     process.exit(0);
   }
@@ -59,9 +72,11 @@ export class InputTaker extends EventEmitter {
       connector = null;
     });
     connector.on('success', () => {
-      log.info('Handshake process success.')
+      log.info('Handshake process success.');
       this.rl.question('', this.handleCommand);
     });
+
+    this.connector = connector;
   }
 
   private handleCommand(command: string) {
@@ -72,13 +87,26 @@ export class InputTaker extends EventEmitter {
   private async action(command: string) {
     switch (command) {
       case 'connect':
-        this.rl.question(
-          'Enter the address:port of the vex server: ',
-          this.handleConnect
-        );
+        if (!this.connector) {
+          log.info('Enter the address:port of the vex server.');
+          this.rl.question('', this.handleConnect);
+        } else {
+          log.warn(
+            'You are already connected to a server. Close it first with close.'
+          );
+        }
         break;
       case 'exit':
         this.shutdown();
+        break;
+      case 'close':
+        if (this.connector) {
+          this.connector.close();
+          this.connector = null;
+          log.info('Connection closed successfully.');
+        } else {
+          log.warn('There isn\'t a connection open.')
+        }
         break;
       default:
         console.log(`Can't find a command ${command}.`);

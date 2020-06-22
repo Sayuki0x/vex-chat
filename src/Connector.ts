@@ -34,6 +34,10 @@ export class Connector extends EventEmitter {
     this.init();
   }
 
+  public close() {
+    this.ws?.close();
+  }
+
   private init() {
     log.debug('Initializing connector.');
     const ws = new WebSocket(
@@ -103,7 +107,7 @@ export class Connector extends EventEmitter {
                       });
                       this.emit('success');
                     } else {
-                      ws.close()
+                      ws.close();
                       this.emit('failure', { code: 'KEYMISMATCH' });
                     }
                   }

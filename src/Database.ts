@@ -78,6 +78,6 @@ export class Database extends EventEmitter {
     }
 
     this.ready = true;
-    log.debug('Database opened successfully..');
+    log.debug('Database initialization success.');
   }
 }
