@@ -1,8 +1,9 @@
 import chalk from 'chalk';
 import log from 'electron-log';
+import { EventEmitter } from 'events';
 import WebSocket from 'ws';
-import { keyring, db } from '.';
-import { toHexString, fromHexString } from './utils/typeHelpers';
+import { db, input, keyring } from '.';
+import { fromHexString, toHexString } from './utils/typeHelpers';
 
 interface IMessage {
   type: string;
@@ -20,12 +21,13 @@ interface IVersionData {
   signed: string;
 }
 
-export class Connector {
+export class Connector extends EventEmitter {
   private ws: WebSocket | null;
   private host: string;
   private port: number;
 
   constructor(host: string, port: number) {
+    super();
     this.ws = null;
     this.host = host;
     this.port = port;
@@ -55,11 +57,11 @@ export class Connector {
     });
 
     ws.on('close', () => {
-      log.debug(chalk.red('Websocket connection closed.'));
+      log.debug('Websocket connection closed.');
     });
 
     ws.on('error', (err: any) => {
-      log.warn(err);
+      this.emit('failure', err);
     });
 
     ws.on('message', async (msg: string) => {
@@ -82,11 +84,38 @@ export class Connector {
 
           if (keyring.verify(pubkey, sig, pubkey)) {
             log.info(`Server validated as ${toHexString(pubkey)}`);
-            await db.storeServer(this.host, this.port, toHexString(pubkey));
+            const status = await db.storeServer(
+              this.host,
+              this.port,
+              toHexString(pubkey)
+            );
+
+            if (status === 'KEYMISMATCH') {
+              input
+                .getRl()
+                .question(
+                  'Do you want to continue? (Y/n)',
+                  async (answer: string) => {
+                    if (answer.toUpperCase() === 'Y') {
+                      await db.sql('servers').update({
+                        port: this.port,
+                        pubkey: toHexString(pubkey),
+                      });
+                      this.emit('success');
+                    } else {
+                      ws.close()
+                      this.emit('failure', { code: 'KEYMISMATCH' });
+                    }
+                  }
+                );
+            } else {
+              this.emit('success');
+            }
           } else {
+            this.emit('failure', { code: 'INVALIDSIG' });
             log.warn(
               chalk.red.bold(
-                'Server delivered invalid signature. Someone may be trying to do the dirty.'
+                'Server delivered invalid signature. Someone may be trying to do the dirty!'
               )
             );
             process.exit(2);

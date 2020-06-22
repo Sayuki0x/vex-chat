@@ -4,7 +4,7 @@ import chalk from 'chalk';
 import log from 'electron-log';
 import { EventEmitter } from 'events';
 import knex from 'knex';
-import { SQLITE_FILENAME } from '.';
+import { input, SQLITE_FILENAME } from '.';
 
 export class Database extends EventEmitter {
   public ready: boolean;
@@ -32,15 +32,31 @@ export class Database extends EventEmitter {
     } catch (err) {
       // if the error is due to unique key collision
       if (err.errno === 19) {
-        await this.sql('servers')
-          .where({
-            hostname,
-          })
-          .update({
-            port,
-          });
+        const serverQuery = await this.sql('servers')
+          .select()
+          .where({ hostname });
+
+        const [server] = serverQuery;
+
+        if (server.pubkey !== pubkey) {
+          log.error(
+            chalk.red.bold(
+              'Server public key has changed! Old public key was ' +
+                server.pubkey +
+                ', but the server is broadcasting public key ' +
+                pubkey +
+                '. Someone might be trying to do the dirty!'
+            )
+          );
+          return 'KEYMISMATCH';
+        } else {
+          await this.sql('servers')
+            .where({ hostname })
+            .update({ port });
+        }
       }
     }
+    return 'SUCCESS';
   }
 
   private async init(): Promise<void> {

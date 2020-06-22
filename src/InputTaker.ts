@@ -21,6 +21,10 @@ export class InputTaker extends EventEmitter {
     this.init();
   }
 
+  public getRl() {
+    return this.rl;
+  }
+
   private init() {
     this.rl.on('SIGINT', this.shutdown);
     process.on('SIGINT', this.shutdown);
@@ -48,8 +52,16 @@ export class InputTaker extends EventEmitter {
     if (components.length >= 2) {
       port = Number(components[1]);
     }
-    const connector = new Connector(host, port);
-    this.rl.question('', this.handleCommand);
+
+    let connector: Connector | null = new Connector(host, port);
+    connector.on('failure', (err) => {
+      log.warn(`${err.code} server connection failure`);
+      connector = null;
+    });
+    connector.on('success', () => {
+      log.info('Handshake process success.')
+      this.rl.question('', this.handleCommand);
+    });
   }
 
   private handleCommand(command: string) {
