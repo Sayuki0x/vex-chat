@@ -20,7 +20,6 @@ export class KeyRing {
     signature: Uint8Array,
     publicKey: Uint8Array
   ): boolean {
-    console.log(message, signature, publicKey);
     return sign.detached.verify(message, signature, publicKey);
   }
 

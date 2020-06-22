@@ -1,8 +1,8 @@
 import chalk from 'chalk';
 import log from 'electron-log';
 import WebSocket from 'ws';
-import { keyring } from '.';
-import { toHexString } from './utils/typeHelpers';
+import { keyring, db } from '.';
+import { toHexString, fromHexString } from './utils/typeHelpers';
 
 interface IMessage {
   type: string;
@@ -62,7 +62,7 @@ export class Connector {
       log.warn(err);
     });
 
-    ws.on('message', (msg: string) => {
+    ws.on('message', async (msg: string) => {
       let message;
       try {
         message = JSON.parse(msg);
@@ -76,7 +76,22 @@ export class Connector {
       switch (message.type) {
         case 'register':
           const serverPubKeys: IPubKeys = message.data;
-          console.log(serverPubKeys);
+
+          const pubkey = fromHexString(message.pubKey);
+          const sig = fromHexString(serverPubKeys.Signed);
+
+          if (keyring.verify(pubkey, sig, pubkey)) {
+            log.info(`Server validated as ${toHexString(pubkey)}`);
+            await db.storeServer(this.host, this.port, toHexString(pubkey));
+          } else {
+            log.warn(
+              chalk.red.bold(
+                'Server delivered invalid signature. Someone may be trying to do the dirty.'
+              )
+            );
+            process.exit(2);
+          }
+
           break;
         default:
           console.log(message.type);
