@@ -21,16 +21,31 @@ interface IVersionData {
   signed: string;
 }
 
+interface IUser {
+  ID: number;
+  CreatedAt: string;
+  UpdatedAt: string;
+  DeletedAt: string | null;
+  PubKey: string;
+  Username: string;
+  UUID: string;
+  Signed: string;
+}
+
 export class Connector extends EventEmitter {
   private ws: WebSocket | null;
   private host: string;
   private port: number;
+  private handshake: boolean;
+  private user: IUser | null;
 
   constructor(host: string, port: number) {
     super();
     this.ws = null;
     this.host = host;
     this.port = port;
+    this.handshake = false;
+    this.user = null;
     this.init();
   }
 
@@ -39,13 +54,10 @@ export class Connector extends EventEmitter {
   }
 
   private init() {
-    log.debug('Initializing connector.');
     const ws = new WebSocket(
       `ws://${this.host}:${this.port.toString()}/socket`
     );
     ws.on('open', () => {
-      log.debug('Connected to server successfully.');
-
       const data: IPubKeys = {
         Pub: toHexString(keyring.getPub()),
         Signed: toHexString(keyring.sign(keyring.getPub())),
@@ -80,6 +92,26 @@ export class Connector extends EventEmitter {
       }
 
       switch (message.type) {
+        case 'user':
+          this.user = message.data;
+          // if (user.Username === '') {
+          //   log.debug('Please set your username.');
+          //   input.getRl().question('', (answer: string) => {
+          //     console.log(answer);
+          //     user.Username = answer;
+          //     user.Signed = toHexString(keyring.sign(keyring.getPub()));
+
+          //     const updateUserMessage: IMessage = {
+          //       data: user,
+          //       pubKey: toHexString(keyring.getPub()),
+          //       type: 'user',
+          //     };
+
+          //     ws.send(JSON.stringify(updateUserMessage));
+          //     this.emit('success');
+          //   });
+          // }
+          break;
         case 'register':
           const serverPubKeys: IPubKeys = message.data;
 
@@ -87,7 +119,6 @@ export class Connector extends EventEmitter {
           const sig = fromHexString(serverPubKeys.Signed);
 
           if (keyring.verify(pubkey, sig, pubkey)) {
-            log.info(`Server validated as ${toHexString(pubkey)}`);
             const status = await db.storeServer(
               this.host,
               this.port,
@@ -106,6 +137,7 @@ export class Connector extends EventEmitter {
                         pubkey: toHexString(pubkey),
                       });
                       this.emit('success');
+                      this.handshake = true;
                     } else {
                       ws.close();
                       this.emit('failure', { code: 'KEYMISMATCH' });
@@ -114,6 +146,10 @@ export class Connector extends EventEmitter {
                 );
             } else {
               this.emit('success');
+              this.handshake = true;
+              log.info(
+                'Connected to ' + this.host + ':' + this.port.toString()
+              );
             }
           } else {
             this.emit('failure', { code: 'INVALIDSIG' });
@@ -127,7 +163,7 @@ export class Connector extends EventEmitter {
 
           break;
         default:
-          console.log(message.type);
+          log.warn('Unsupported message ' + message.type);
       }
     });
 

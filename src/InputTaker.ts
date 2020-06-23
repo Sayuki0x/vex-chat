@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import log from 'electron-log';
 import { EventEmitter } from 'events';
 import readline, { createInterface } from 'readline';
-import { db } from '.';
+import { db, input } from '.';
 import { Connector } from './Connector';
 import { sleep } from './utils/sleep';
 
@@ -37,7 +37,7 @@ export class InputTaker extends EventEmitter {
     }
 
     log.info(
-      `Please enter a command. (Use ${chalk.bold('help')} to see the menu)`
+      `Please enter a command. (Use ${chalk.bold('/help')} to see the menu)`
     );
   }
 
@@ -68,11 +68,10 @@ export class InputTaker extends EventEmitter {
 
     let connector: Connector | null = new Connector(host, port);
     connector.on('failure', (err) => {
-      log.warn(`${err.code} server connection failure`);
+      log.warn(`${err.code} An error occurred.`);
       connector = null;
     });
     connector.on('success', () => {
-      log.info('Handshake process success.');
       this.rl.question('', this.handleCommand);
     });
 
@@ -86,7 +85,7 @@ export class InputTaker extends EventEmitter {
 
   private async action(command: string) {
     switch (command) {
-      case 'connect':
+      case '/connect':
         if (!this.connector) {
           log.info('Enter the address:port of the vex server.');
           this.rl.question('', this.handleConnect);
@@ -96,20 +95,20 @@ export class InputTaker extends EventEmitter {
           );
         }
         break;
-      case 'exit':
+      case '/exit':
         this.shutdown();
         break;
-      case 'close':
+      case '/close':
         if (this.connector) {
           this.connector.close();
           this.connector = null;
           log.info('Connection closed successfully.');
         } else {
-          log.warn('There isn\'t a connection open.')
+          log.warn(`There isn't a connection open.`);
         }
         break;
       default:
-        console.log(`Can't find a command ${command}.`);
+        log.warn(`Can't find a command ${command}.`);
         break;
     }
   }

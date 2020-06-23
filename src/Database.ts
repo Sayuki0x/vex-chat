@@ -77,7 +77,16 @@ export class Database extends EventEmitter {
       );
     }
 
+    if (!tableNames.includes('accounts')) {
+      await this.sql.raw(
+        `CREATE TABLE "accounts" (
+           "hostname"	TEXT UNIQUE,
+           "username" TEXT,
+           "uuid" TEXT
+         );`
+      );
+    }
+
     this.ready = true;
-    log.debug('Database initialization success.');
   }
 }

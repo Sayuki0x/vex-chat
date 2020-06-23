@@ -32,8 +32,6 @@ export class KeyRing {
   }
 
   private init() {
-    log.debug('Initializing keyring.');
-
     if (
       !fs.existsSync('keys') ||
       (!fs.existsSync('./keys/key.pub') && !fs.existsSync('./keys/key.pub'))
