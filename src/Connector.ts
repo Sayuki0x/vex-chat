@@ -3,6 +3,7 @@ import log from 'electron-log';
 import { EventEmitter } from 'events';
 import WebSocket from 'ws';
 import { db, input, keyring } from '.';
+import { sleep } from './utils/sleep';
 import { fromHexString, toHexString } from './utils/typeHelpers';
 
 interface IMessage {
@@ -58,6 +59,12 @@ export class Connector extends EventEmitter {
       `ws://${this.host}:${this.port.toString()}/socket`
     );
     ws.on('open', () => {
+      setTimeout(() => {
+        if (!this.handshake) {
+          ws.close();
+        }
+      }, 5000);
+
       const data: IPubKeys = {
         Pub: toHexString(keyring.getPub()),
         Signed: toHexString(keyring.sign(keyring.getPub())),
@@ -91,30 +98,21 @@ export class Connector extends EventEmitter {
         process.exit(1);
       }
 
+      // wait to do anything until the handshake is successful
+      if (message.type !== 'register' && !this.handshake) {
+        let timeout = 1;
+        while (!this.handshake) {
+          await sleep(timeout);
+          timeout *= 2;
+        }
+      }
+
       switch (message.type) {
         case 'user':
           this.user = message.data;
-          // if (user.Username === '') {
-          //   log.debug('Please set your username.');
-          //   input.getRl().question('', (answer: string) => {
-          //     console.log(answer);
-          //     user.Username = answer;
-          //     user.Signed = toHexString(keyring.sign(keyring.getPub()));
-
-          //     const updateUserMessage: IMessage = {
-          //       data: user,
-          //       pubKey: toHexString(keyring.getPub()),
-          //       type: 'user',
-          //     };
-
-          //     ws.send(JSON.stringify(updateUserMessage));
-          //     this.emit('success');
-          //   });
-          // }
           break;
         case 'register':
           const serverPubKeys: IPubKeys = message.data;
-
           const pubkey = fromHexString(message.pubKey);
           const sig = fromHexString(serverPubKeys.Signed);
 

@@ -66,10 +66,13 @@ export class InputTaker extends EventEmitter {
       port = Number(components[1]);
     }
 
-    let connector: Connector | null = new Connector(host, port);
+    const connector: Connector | null = new Connector(host, port);
     connector.on('failure', (err) => {
       log.warn(`${err.code} An error occurred.`);
-      connector = null;
+      console.log(this.connector);
+      this.connector?.close();
+      this.connector = null;
+      this.rl.question('', this.handleCommand);
     });
     connector.on('success', () => {
       this.rl.question('', this.handleCommand);
@@ -86,6 +89,7 @@ export class InputTaker extends EventEmitter {
   private async action(command: string) {
     switch (command) {
       case '/connect':
+        console.log(this.connector);
         if (!this.connector) {
           log.info('Enter the address:port of the vex server.');
           this.rl.question('', this.handleConnect);
