@@ -134,7 +134,7 @@ export class InputTaker extends EventEmitter {
         }
         break;
       default:
-        this.connector?.getWs()?.send(command);
+        log.warn('No command ' + command)
         break;
     }
   }
