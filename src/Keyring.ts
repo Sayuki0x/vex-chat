@@ -1,13 +1,23 @@
 import log from 'electron-log';
 import fs from 'fs';
-import { sign, SignKeyPair } from 'tweetnacl';
+import { sign, SignKeyPair, box, BoxKeyPair } from 'tweetnacl';
 import { fromHexString, toHexString } from './utils/typeHelpers';
 
+const keyFolder = {
+  encryptPrivKey: 'encryption_key.priv',
+  encryptPubKey: 'encryption_key.pub',
+  name: 'keys',
+  signPrivKey: 'signing_key.priv',
+  signPubKey: 'signing_key.pub',
+};
+
 export class KeyRing {
-  private keyPair: SignKeyPair | null;
+  private signKeyPair: SignKeyPair | null;
+  private encryptKeyPair: BoxKeyPair | null;
 
   constructor() {
-    this.keyPair = null;
+    this.signKeyPair = null;
+    this.encryptKeyPair = null;
     this.init();
   }
 
@@ -23,43 +33,89 @@ export class KeyRing {
     return sign.detached.verify(message, signature, publicKey);
   }
 
+  public getEncryptionPub() {
+    return this.encryptKeyPair!.publicKey;
+  }
+
   public getPub() {
-    return this.keyPair!.publicKey;
+    return this.signKeyPair!.publicKey;
   }
 
   private getPriv() {
-    return this.keyPair!.secretKey;
+    return this.signKeyPair!.secretKey;
   }
 
   private init() {
     if (
-      !fs.existsSync('keys') ||
-      (!fs.existsSync('./keys/key.pub') && !fs.existsSync('./keys/key.pub'))
+      !fs.existsSync(keyFolder.name) ||
+      (!fs.existsSync(`./${keyFolder.name}/${keyFolder.signPubKey}`) &&
+        !fs.existsSync(`./${keyFolder.name}/${keyFolder.signPrivKey}`))
     ) {
-      fs.mkdirSync('keys');
+      fs.mkdirSync(keyFolder.name);
 
-      const keys = sign.keyPair();
+      const signingKeys = sign.keyPair();
 
-      fs.writeFileSync('./keys/key.pub', toHexString(keys.publicKey), {
-        encoding: 'utf8',
-      });
-      fs.writeFileSync('./keys/key.priv', toHexString(keys.secretKey), {
-        encoding: 'utf8',
-      });
+      fs.writeFileSync(
+        `./${keyFolder.name}/${keyFolder.signPubKey}`,
+        toHexString(signingKeys.publicKey),
+        {
+          encoding: 'utf8',
+        }
+      );
+      fs.writeFileSync(
+        `./${keyFolder.name}/${keyFolder.signPrivKey}`,
+        toHexString(signingKeys.secretKey),
+        {
+          encoding: 'utf8',
+        }
+      );
+    }
+
+    if (
+      !fs.existsSync(`./${keyFolder.name}/${keyFolder.encryptPubKey}`) &&
+      !fs.existsSync(`./${keyFolder.name}/${keyFolder.encryptPrivKey}`)
+    ) {
+      const encryptionKeys = box.keyPair();
+
+      fs.writeFileSync(
+        `./${keyFolder.name}/${keyFolder.encryptPubKey}`,
+        toHexString(encryptionKeys.publicKey),
+        {
+          encoding: 'utf8',
+        }
+      );
+      fs.writeFileSync(
+        `./${keyFolder.name}/${keyFolder.encryptPrivKey}`,
+        toHexString(encryptionKeys.secretKey),
+        {
+          encoding: 'utf8',
+        }
+      );
     }
 
     const priv = fromHexString(
-      fs.readFileSync('./keys/key.priv', { encoding: 'utf8' })
+      fs.readFileSync(`./${keyFolder.name}/${keyFolder.signPrivKey}`, {
+        encoding: 'utf8',
+      })
     );
 
     if (priv.length !== 64) {
       throw new Error(
-        'Invalid keyfiles. Please generate new keyfiles and replace them in the keys directory.'
+        'Invalid keyfiles. Please generate new keyfiles and replace them in the signingKeys directory.'
       );
     }
 
-    const keyPair = sign.keyPair.fromSecretKey(priv);
-    this.keyPair = keyPair;
+    const signKeyPair = sign.keyPair.fromSecretKey(priv);
+    this.signKeyPair = signKeyPair;
+
+    const encryptPriv = fromHexString(
+      fs.readFileSync(`./${keyFolder.name}/${keyFolder.encryptPrivKey}`, {
+        encoding: 'utf8',
+      })
+    );
+
+    const encryptKeyPair = box.keyPair.fromSecretKey(encryptPriv);
+    this.encryptKeyPair = encryptKeyPair;
 
     log.debug(`Client public key ${toHexString(this.getPub())}`);
   }

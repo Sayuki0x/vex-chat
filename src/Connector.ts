@@ -15,11 +15,11 @@ interface ISubscription {
 }
 
 export class Connector extends EventEmitter {
+  public handshakeStatus: boolean;
   private ws: WebSocket | null;
   private host: string;
   private port: number;
   private serverPubKey: string | null;
-  private handshakeStatus: boolean;
   private subscriptions: ISubscription[];
   private registered: boolean;
 
