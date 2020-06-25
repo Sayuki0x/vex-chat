@@ -33,6 +33,7 @@
     }
   },
   "dependencies": {
+    "@types/uuid": "^8.0.0",
     "@types/ws": "^7.2.5",
     "chalk": "^4.1.0",
     "dotenv": "^8.2.0",
@@ -41,6 +42,8 @@
     "ora": "^4.0.4",
     "sqlite3": "^4.2.0",
     "tweetnacl": "^1.0.3",
+    "tweetnacl-util": "^0.15.1",
+    "uuid": "^8.2.0",
     "ws": "^7.3.0"
   }
 }

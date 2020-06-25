@@ -2,9 +2,12 @@ import chalk from 'chalk';
 import log from 'electron-log';
 import { EventEmitter } from 'events';
 import readline, { createInterface } from 'readline';
-import { db, input } from '.';
+import { decodeUTF8, encodeUTF8 } from 'tweetnacl-util';
+import { v4 as uuidv4 } from 'uuid';
+import { db, input, keyring } from '.';
 import { Connector } from './Connector';
 import { sleep } from './utils/sleep';
+import { fromHexString, toHexString } from './utils/typeHelpers';
 
 export class InputTaker extends EventEmitter {
   private rl: readline.Interface;
@@ -16,10 +19,10 @@ export class InputTaker extends EventEmitter {
       input: process.stdin,
       output: process.stdout,
     });
+    this.connector = null;
     this.handleCommand = this.handleCommand.bind(this);
     this.shutdown = this.shutdown.bind(this);
     this.handleConnect = this.handleConnect.bind(this);
-    this.connector = null;
     this.init();
   }
 
@@ -68,8 +71,9 @@ export class InputTaker extends EventEmitter {
 
     const connector: Connector | null = new Connector(host, port);
     connector.on('failure', (err) => {
-      log.warn(`${err.code} An error occurred.`);
-      console.log(this.connector);
+      if (err) {
+        log.warn(`${err.code}`);
+      }
       this.connector?.close();
       this.connector = null;
       this.rl.question('', this.handleCommand);
@@ -89,7 +93,6 @@ export class InputTaker extends EventEmitter {
   private async action(command: string) {
     switch (command) {
       case '/connect':
-        console.log(this.connector);
         if (!this.connector) {
           log.info('Enter the address:port of the vex server.');
           this.rl.question('', this.handleConnect);
@@ -112,7 +115,7 @@ export class InputTaker extends EventEmitter {
         }
         break;
       default:
-        log.warn(`Can't find a command ${command}.`);
+        this.connector?.getWs()?.send(command);
         break;
     }
   }
