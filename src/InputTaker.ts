@@ -124,7 +124,7 @@ export class InputTaker extends EventEmitter {
       case '/exit':
         this.shutdown();
         break;
-      case '/close':
+      case '/logout':
         if (this.connector) {
           this.connector.close();
           this.connector = null;
