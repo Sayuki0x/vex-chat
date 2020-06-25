@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import log from 'electron-log';
 import { EventEmitter } from 'events';
 import { decodeUTF8, encodeUTF8 } from 'tweetnacl-util';
@@ -6,7 +7,6 @@ import WebSocket from 'ws';
 import { db, keyring } from '.';
 import { sleep } from './utils/sleep';
 import { fromHexString, toHexString } from './utils/typeHelpers';
-import chalk from 'chalk';
 
 interface ISubscription {
   // tslint:disable-next-line: ban-types
@@ -212,7 +212,7 @@ export class Connector extends EventEmitter {
           this.getWs()?.send(JSON.stringify(challengeResponse));
           break;
         default:
-          log.debug('Received unsupported message ' + jsonMessage.type);
+          log.debug('IN', jsonMessage);
           break;
       }
     });

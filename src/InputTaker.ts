@@ -97,6 +97,20 @@ export class InputTaker extends EventEmitter {
 
   private async action(command: string) {
     switch (command) {
+      case '/channel new':
+        const message = {
+          method: 'CREATE',
+          type: 'channel',
+        };
+        this.connector?.getWs()?.send(JSON.stringify(message));
+        break;
+      case '/channel ls':
+        const msg = {
+          method: 'RETRIEVE',
+          type: 'channel',
+        };
+        this.connector?.getWs()?.send(JSON.stringify(msg));
+        break;
       case '/connect':
         if (!this.connector) {
           log.info('Enter the address:port of the vex server.');
