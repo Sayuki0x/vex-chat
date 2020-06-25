@@ -82,6 +82,11 @@ export class InputTaker extends EventEmitter {
       this.rl.question('', this.handleCommand);
     });
 
+    connector.on('close', () => {
+      this.connector = null;
+      this.rl.question('', this.handleCommand);
+    });
+
     this.connector = connector;
   }
 

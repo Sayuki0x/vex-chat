@@ -172,7 +172,8 @@ export class Connector extends EventEmitter {
     });
 
     ws.on('close', () => {
-      log.warn('Websocket connection closed by server.');
+      log.warn('Websocket connection closed.');
+      this.emit('close');
     });
 
     ws.on('error', (err: any) => {
