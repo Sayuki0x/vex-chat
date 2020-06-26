@@ -16,6 +16,7 @@ interface ISubscription {
 
 export class Connector extends EventEmitter {
   public handshakeStatus: boolean;
+  public connectedChannelId: string | null;
   private ws: WebSocket | null;
   private host: string;
   private port: number;
@@ -31,6 +32,7 @@ export class Connector extends EventEmitter {
     this.host = host;
     this.port = port;
     this.serverPubKey = null;
+    this.connectedChannelId = null;
     this.subscriptions = [];
     this.init();
   }
@@ -131,6 +133,7 @@ export class Connector extends EventEmitter {
           fromHexString(pubkey || msg.pubkey)
         )
       ) {
+        this.serverPubKey = pubkey || msg.pubkey;
         if (newServer) {
           await db
             .sql('servers')
@@ -196,6 +199,10 @@ export class Connector extends EventEmitter {
       }
 
       switch (jsonMessage.type) {
+        case 'channelJoinRes':
+          this.connectedChannelId = jsonMessage.channelID;
+          log.info('Connected to channel ' + jsonMessage.name);
+          break;
         case 'error':
           log.warn(chalk.yellow.bold(jsonMessage.message));
           this.emit('failure');

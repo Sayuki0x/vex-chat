@@ -133,8 +133,8 @@ export class InputTaker extends EventEmitter {
               type: 'channel',
             };
 
-            this.connector?.subscribe(newChannelMsgId, (msg: any) => {
-              log.info(msg.status);
+            this.connector?.subscribe(newChannelMsgId, (newMsg: any) => {
+              log.info(newMsg.status);
             });
 
             this.connector?.getWs()?.send(JSON.stringify(message));
@@ -149,8 +149,8 @@ export class InputTaker extends EventEmitter {
             type: 'channel',
           };
 
-          this.connector?.subscribe(listChannelMsgId, (msg: any) => {
-            for (const channel of msg.channels) {
+          this.connector?.subscribe(listChannelMsgId, (lsMsg: any) => {
+            for (const channel of lsMsg.channels) {
               console.log(
                 `${channel.ID.toString()} ${channel.name} ${channel.channelID}`
               );
@@ -183,14 +183,14 @@ export class InputTaker extends EventEmitter {
           }
         } else {
           log.warn(
-            'You are already connected to a server. Logout with /logout first.'
+            'You are already logged in to a server. Close connection with /close first.'
           );
         }
         break;
       case '/exit':
         this.shutdown();
         break;
-      case '/logout':
+      case '/close':
         if (this.connector) {
           this.connector.close();
           this.connector = null;
@@ -200,7 +200,17 @@ export class InputTaker extends EventEmitter {
         }
         break;
       default:
-        log.warn('No command ' + command);
+        if (this.connector?.connectedChannelId !== null) {
+          const chatMessage = {
+            type: 'chat',
+            method: 'CREATE',
+            message: command,
+            messageID: uuidv4(),
+            channelID: this.connector?.connectedChannelId,
+          };
+
+          this.connector?.getWs()?.send(JSON.stringify(chatMessage));
+        }
         break;
     }
   }

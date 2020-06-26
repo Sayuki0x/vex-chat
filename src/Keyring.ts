@@ -1,6 +1,6 @@
 import log from 'electron-log';
 import fs from 'fs';
-import { sign, SignKeyPair, box, BoxKeyPair } from 'tweetnacl';
+import { box, BoxKeyPair, sign, SignKeyPair } from 'tweetnacl';
 import { fromHexString, toHexString } from './utils/typeHelpers';
 
 const keyFolder = {
