@@ -14,5 +14,3 @@ export const { SQLITE_FILENAME } = process.env;
 export const db = new Database();
 export const input = new InputTaker();
 export const keyring = new KeyRing();
-
-console.log();

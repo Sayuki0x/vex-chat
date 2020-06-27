@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import log from 'electron-log';
+import { printHelp } from './printHelp';
 
 export function printAscii() {
   console.log(
@@ -18,5 +18,8 @@ export function printAscii() {
         '           vvv               eeeeeeeeeeeeee  xxxxxxx      xxxxxxx\n'
     )
   );
-  log.debug('Vex CLI client version v0.0.1');
+  console.log('Vex CLI client version v0.0.1');
+  console.log();
+  printHelp();
+  console.log();
 }

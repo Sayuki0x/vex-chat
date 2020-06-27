@@ -1,17 +1,16 @@
 import chalk from 'chalk';
-import log from 'electron-log';
 import { EventEmitter } from 'events';
 import readline, { createInterface } from 'readline';
-import { decodeUTF8, encodeUTF8 } from 'tweetnacl-util';
 import { v4 as uuidv4 } from 'uuid';
-import { db, input, keyring } from '.';
+import { db } from '.';
 import { Connector } from './Connector';
 import { sleep } from './utils/sleep';
-import { fromHexString, toHexString } from './utils/typeHelpers';
+import { printHelp } from './utils/printHelp';
 
 export class InputTaker extends EventEmitter {
   private rl: readline.Interface;
   private connector: Connector | null;
+  private inRoom: boolean;
 
   constructor() {
     super();
@@ -24,6 +23,11 @@ export class InputTaker extends EventEmitter {
     this.shutdown = this.shutdown.bind(this);
     this.handleConnect = this.handleConnect.bind(this);
     this.init();
+    this.inRoom = false;
+  }
+
+  public setInRoom(status: boolean) {
+    this.inRoom = status;
   }
 
   public getRl() {
@@ -39,7 +43,7 @@ export class InputTaker extends EventEmitter {
       await sleep(500);
     }
 
-    log.info(
+    console.log(
       `Please enter a command. (Use ${chalk.bold('/help')} to see the menu)`
     );
   }
@@ -48,7 +52,7 @@ export class InputTaker extends EventEmitter {
     if (this.connector) {
       this.connector.close();
     }
-    log.info('Thanks for stopping by');
+    console.log('Thanks for stopping by');
     process.exit(0);
   }
 
@@ -58,7 +62,11 @@ export class InputTaker extends EventEmitter {
     let host = 'localhost';
 
     if (components.length === 0) {
-      console.log('You need to provide at least an address, e.g., 127.0.0.1');
+      console.log(
+        chalk.yellow.bold(
+          'You need to provide at least an address, e.g., 127.0.0.1'
+        )
+      );
     }
 
     if (components.length >= 1) {
@@ -69,10 +77,14 @@ export class InputTaker extends EventEmitter {
       port = Number(components[1]);
     }
 
-    const connector: Connector | null = new Connector(host, port);
+    const connector: Connector | null = new Connector(
+      host,
+      port,
+      this.setInRoom.bind(this)
+    );
     connector.on('failure', (err) => {
       if (err) {
-        log.warn(`${err.code}`);
+        console.log('An error occurred:', chalk.yellow.bold(`${err.code}`));
       }
       this.connector?.close();
       this.connector = null;
@@ -105,24 +117,35 @@ export class InputTaker extends EventEmitter {
     const baseCommand = commandArgs.shift();
 
     switch (baseCommand) {
+      case '/help':
+        console.log();
+        printHelp();
+        console.log();
+        break;
       case '/channel':
         if (!this.connector || !this.connector.handshakeStatus) {
-          log.warn(
-            'You need to login first! Use /connect hostname. See /help for details.'
+          console.log(
+            chalk.yellow.bold(
+              'You need to login first! Use /connect hostname. See /help for details.'
+            )
           );
           break;
         }
 
         const arg = commandArgs.shift();
         if (!arg) {
-          log.warn(
-            '/channel command requires an argument [new, ls]. See /help for details.'
+          console.log(
+            chalk.yellow.bold(
+              '/channel command requires an argument [new, ls]. See /help for details.'
+            )
           );
         }
         if (arg === 'new') {
           if (commandArgs.length === 0) {
-            log.warn(
-              '/channel new requires a name argument, eg. /channel new General. See /help for details.'
+            console.log(
+              chalk.yellow.bold(
+                '/channel new requires a name argument, eg. /channel new General. See /help for details.'
+              )
             );
           } else {
             const newChannelMsgId = uuidv4();
@@ -134,7 +157,7 @@ export class InputTaker extends EventEmitter {
             };
 
             this.connector?.subscribe(newChannelMsgId, (newMsg: any) => {
-              log.info(newMsg.status);
+              console.log(newMsg.status);
             });
 
             this.connector?.getWs()?.send(JSON.stringify(message));
@@ -171,18 +194,19 @@ export class InputTaker extends EventEmitter {
 
           this.connector?.getWs()?.send(JSON.stringify(msg));
         }
+
         break;
       case '/connect':
         if (!this.connector) {
           if (commandArgs.length === 0) {
-            log.info('Enter the address:port of the vex server.');
+            console.log('Enter the address:port of the vex server.');
             this.rl.question('', this.handleConnect);
           } else {
             const host: string | undefined = commandArgs.shift();
             this.handleConnect(host!);
           }
         } else {
-          log.warn(
+          console.log(
             'You are already logged in to a server. Close connection with /close first.'
           );
         }
@@ -194,23 +218,20 @@ export class InputTaker extends EventEmitter {
         if (this.connector) {
           this.connector.close();
           this.connector = null;
-          log.info('Connection closed successfully.');
+          console.log('Connection closed successfully.');
         } else {
-          log.warn(`There isn't a connection open.`);
+          console.log(`There isn't a connection open.`);
         }
         break;
       default:
-        if (this.connector?.connectedChannelId !== null) {
-          const chatMessage = {
-            type: 'chat',
-            method: 'CREATE',
-            message: command,
-            messageID: uuidv4(),
-            channelID: this.connector?.connectedChannelId,
-          };
+        const chatMessage = {
+          message: command,
+          messageID: uuidv4(),
+          method: 'CREATE',
+          type: 'chat',
+        };
 
-          this.connector?.getWs()?.send(JSON.stringify(chatMessage));
-        }
+        this.connector?.getWs()?.send(JSON.stringify(chatMessage));
         break;
     }
   }

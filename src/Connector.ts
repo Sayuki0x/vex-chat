@@ -23,8 +23,13 @@ export class Connector extends EventEmitter {
   private serverPubKey: string | null;
   private subscriptions: ISubscription[];
   private registered: boolean;
+  private setInRoom: (status: boolean) => void;
 
-  constructor(host: string, port: number) {
+  constructor(
+    host: string,
+    port: number,
+    setInRoom: (status: boolean) => void
+  ) {
     super();
     this.ws = null;
     this.handshakeStatus = false;
@@ -35,6 +40,7 @@ export class Connector extends EventEmitter {
     this.connectedChannelId = null;
     this.subscriptions = [];
     this.init();
+    this.setInRoom = setInRoom;
   }
 
   public getHost() {
@@ -142,7 +148,9 @@ export class Connector extends EventEmitter {
         }
         this.handshakeStatus = true;
       } else {
-        log.warn('Server sent back bad signature! Disconnecting.');
+        console.log(
+          chalk.yellow.bold('Server sent back bad signature! Disconnecting.')
+        );
         ws.close();
       }
     });
@@ -169,13 +177,11 @@ export class Connector extends EventEmitter {
         await sleep(timeout);
         timeout *= 2;
       }
-
-      log.info('Logged in to ' + this.host);
       this.emit('success');
     });
 
     ws.on('close', () => {
-      log.warn('Websocket connection closed.');
+      console.log(chalk.yellow.bold('Connection closed.'));
       this.emit('close');
     });
 
@@ -195,16 +201,32 @@ export class Connector extends EventEmitter {
           }
         }
       } catch (err) {
-        log.warn(err);
+        console.warn(err);
       }
 
       switch (jsonMessage.type) {
+        case 'authResult':
+          if (jsonMessage.status === 'SUCCESS') {
+            this.setInRoom(true);
+          }
+          break;
+        case 'welcomeMessage':
+          console.log();
+          console.log(jsonMessage.message);
+          console.log();
+          break;
+        case 'chat':
+          console.log(
+            '\x1B[1A' +
+              `${chalk.bold(jsonMessage.userID)}: ${jsonMessage.message}`
+          );
+          break;
         case 'channelJoinRes':
           this.connectedChannelId = jsonMessage.channelID;
           log.info('Connected to channel ' + jsonMessage.name);
           break;
         case 'error':
-          log.warn(chalk.yellow.bold(jsonMessage.message));
+          console.log(chalk.yellow.bold(jsonMessage.message));
           this.emit('failure');
           break;
         case 'challenge':
@@ -219,7 +241,7 @@ export class Connector extends EventEmitter {
           this.getWs()?.send(JSON.stringify(challengeResponse));
           break;
         default:
-          log.debug('IN', jsonMessage);
+          console.log('IN', jsonMessage);
           break;
       }
     });

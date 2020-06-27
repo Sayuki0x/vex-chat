@@ -1,4 +1,3 @@
-import log from 'electron-log';
 import fs from 'fs';
 import { box, BoxKeyPair, sign, SignKeyPair } from 'tweetnacl';
 import { fromHexString, toHexString } from './utils/typeHelpers';
@@ -116,7 +115,5 @@ export class KeyRing {
 
     const encryptKeyPair = box.keyPair.fromSecretKey(encryptPriv);
     this.encryptKeyPair = encryptKeyPair;
-
-    log.debug(`Client public key ${toHexString(this.getPub())}`);
   }
 }
