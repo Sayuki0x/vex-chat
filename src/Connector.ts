@@ -36,6 +36,7 @@ export class Connector extends EventEmitter {
   private user: IUser | null;
   private historyRetrieved: boolean;
   private setInRoom: (status: boolean) => void;
+  private serverAlive: boolean;
 
   constructor(
     host: string,
@@ -53,6 +54,7 @@ export class Connector extends EventEmitter {
     this.subscriptions = [];
     this.user = null;
     this.historyRetrieved = false;
+    this.serverAlive = true;
     this.init();
     this.setInRoom = setInRoom;
   }
@@ -215,6 +217,8 @@ export class Connector extends EventEmitter {
   }
 
   private async getHistory() {
+    console.log('                                    ');
+
     const historyQuery = await db
       .sql('chat_messages')
       .select('message_id', 'created_at')
@@ -259,12 +263,28 @@ export class Connector extends EventEmitter {
     }
   }
 
+  private async startPing() {
+    while (true) {
+      if (this.serverAlive !== true) {
+        console.log('Server not responding, maybe down?');
+        this.ws?.close();
+        this.emit('failure');
+      }
+      this.serverAlive = false;
+      const pongID = uuidv4();
+      this.subscribe(pongID, () => {
+        this.serverAlive = true;
+      });
+      this.ws?.send(JSON.stringify({ type: 'ping', messageID: pongID }));
+      await sleep(10000);
+    }
+  }
+
   private init() {
-    const ws = new WebSocket(
-      `ws://${this.host}:${this.port.toString()}/socket`
-    );
+    const ws = new WebSocket(`wss://${this.host}/socket`);
 
     ws.on('open', async () => {
+      console.log(chalk.green.bold('Connected!'));
       this.handshake(ws);
 
       setTimeout(() => {
@@ -278,6 +298,9 @@ export class Connector extends EventEmitter {
         await sleep(timeout);
         timeout *= 2;
       }
+
+      this.startPing();
+
       this.emit('success');
     });
 
@@ -347,6 +370,8 @@ export class Connector extends EventEmitter {
             type: 'challengeRes',
           };
           this.getWs()?.send(JSON.stringify(challengeResponse));
+          break;
+        case 'pong':
           break;
         default:
           console.log('IN', jsonMessage);

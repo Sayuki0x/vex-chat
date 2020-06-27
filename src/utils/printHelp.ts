@@ -3,7 +3,7 @@ import chalk from 'chalk';
 export function printHelp() {
   console.log(
     chalk.bold('/connect'),
-    'Connects to a server. Accepts one optional parameter of server:port.'
+    'Connects to a server. Accepts one optional parameter of the server hostname.'
   );
   console.log(
     chalk.bold('/close'),
