@@ -264,11 +264,18 @@ export class Connector extends EventEmitter {
   }
 
   private async startPing() {
+    let failedCount = 0;
     while (true) {
       if (this.serverAlive !== true) {
+        failedCount++;
+      } else {
+        failedCount = 0;
+      }
+      if (failedCount > 5) {
         console.log('Server not responding, maybe down?');
         this.ws?.close();
         this.emit('failure');
+        break;
       }
       this.serverAlive = false;
       const pongID = uuidv4();
