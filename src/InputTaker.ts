@@ -200,17 +200,14 @@ export class InputTaker extends EventEmitter {
         }
         break;
       default:
-        if (this.connector?.connectedChannelId !== null) {
-          const chatMessage = {
-            type: 'chat',
-            method: 'CREATE',
-            message: command,
-            messageID: uuidv4(),
-            channelID: this.connector?.connectedChannelId,
-          };
+        const chatMessage = {
+          message: command,
+          messageID: uuidv4(),
+          method: 'CREATE',
+          type: 'chat',
+        };
 
-          this.connector?.getWs()?.send(JSON.stringify(chatMessage));
-        }
+        this.connector?.getWs()?.send(JSON.stringify(chatMessage));
         break;
     }
   }

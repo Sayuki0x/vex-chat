@@ -199,6 +199,9 @@ export class Connector extends EventEmitter {
       }
 
       switch (jsonMessage.type) {
+        case 'chat':
+          log.debug(`${jsonMessage.userID}: ${jsonMessage.message}`);
+          break;
         case 'channelJoinRes':
           this.connectedChannelId = jsonMessage.channelID;
           log.info('Connected to channel ' + jsonMessage.name);
