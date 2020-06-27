@@ -21,6 +21,8 @@ interface IUser {
   hostname: string;
 }
 
+const maxUsernameLength = 15;
+
 export class Connector extends EventEmitter {
   public handshakeStatus: boolean;
   public connectedChannelId: string | null;
@@ -240,17 +242,21 @@ export class Connector extends EventEmitter {
           console.log();
           break;
         case 'chat':
-          log.debug(
-            `${
-              jsonMessage.userID === serverMessageUserID
-                ? ''
-                : chalk.bold(jsonMessage.username) + ': '
-            }${
-              jsonMessage.message.charAt(0) === '>'
-                ? chalk.green.bold(jsonMessage.message)
-                : jsonMessage.message
-            }`
-          );
+          if (jsonMessage.userID === serverMessageUserID) {
+            log.debug(chalk.italic.blackBright(jsonMessage.message));
+          } else {
+            log.debug(
+              `${normalizeStringLength(
+                jsonMessage.username,
+                maxUsernameLength
+              )}${
+                jsonMessage.message.charAt(0) === '>'
+                  ? chalk.green(jsonMessage.message)
+                  : jsonMessage.message
+              }`
+            );
+          }
+
           break;
         case 'channelJoinRes':
           this.connectedChannelId = jsonMessage.channelID;
@@ -279,4 +285,11 @@ export class Connector extends EventEmitter {
 
     this.ws = ws;
   }
+}
+
+function normalizeStringLength(s: string, len: number) {
+  while (s.length < len) {
+    s += ' ';
+  }
+  return s;
 }

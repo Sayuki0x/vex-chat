@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import log from 'electron-log';
 import { Database } from './Database';
 import { InputTaker } from './InputTaker';
@@ -10,7 +11,7 @@ loadEnv();
 printAscii();
 
 // configure logger
-log.transports.console.format = '{h}:{i}:{s} › {text}';
+log.transports.console.format = `${chalk.blackBright('{h}:{i}:{s} ›')} {text}`;
 
 export const { SQLITE_FILENAME } = process.env;
 
