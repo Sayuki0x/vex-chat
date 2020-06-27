@@ -73,7 +73,7 @@ export class Database extends EventEmitter {
            "hostname"	TEXT UNIQUE,
            "port" NUMBER,
            "pubkey" TEXT
-         );`
+        );`
       );
     }
 
@@ -83,7 +83,25 @@ export class Database extends EventEmitter {
            "hostname"	TEXT UNIQUE,
            "username" TEXT,
            "uuid" TEXT
-         );`
+        );`
+      );
+    }
+
+    if (!tableNames.includes('chat_messages')) {
+      await this.sql.raw(
+        `CREATE TABLE "chat_messages" (
+          "id" NUMBER,
+          "created_at" datetime,
+          "updated_at" datetime,
+          "deleted_at" datetime,
+          "user_id" text,
+          "username" varchar(255),
+          "message_id" text PRIMARY KEY,
+          "method" varchar(255),
+          "message" varchar(255),
+          "channel_id" text,
+          "type" varchar(255)
+        )`
       );
     }
 

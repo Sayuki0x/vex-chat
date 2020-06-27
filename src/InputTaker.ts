@@ -118,11 +118,13 @@ export class InputTaker extends EventEmitter {
 
     switch (baseCommand) {
       case '/help':
+        console.log('\x1B[3A');
         console.log();
         printHelp();
         console.log();
         break;
       case '/channel':
+        console.log('\x1B[2A');
         if (!this.connector || !this.connector.handshakeStatus) {
           console.log(
             chalk.yellow.bold(
@@ -197,6 +199,7 @@ export class InputTaker extends EventEmitter {
 
         break;
       case '/nick':
+        console.log('\x1B[2A');
         if (!this.connector || !this.connector.handshakeStatus) {
           console.log(
             `Your'e not logged in to a server! Connect first with /connect`
@@ -221,6 +224,7 @@ export class InputTaker extends EventEmitter {
 
         break;
       case '/connect':
+        console.log('\x1B[2A');
         if (!this.connector) {
           if (commandArgs.length === 0) {
             console.log('Enter the address:port of the vex server.');
@@ -236,9 +240,11 @@ export class InputTaker extends EventEmitter {
         }
         break;
       case '/exit':
+        console.log('\x1B[2A');
         this.shutdown();
         break;
       case '/close':
+        console.log('\x1B[2A');
         if (this.connector) {
           this.connector.close();
           this.connector = null;
@@ -248,15 +254,14 @@ export class InputTaker extends EventEmitter {
         }
         break;
       default:
+        console.log('\x1B[2A');
         const chatMessage = {
           message: command,
           messageID: uuidv4(),
           method: 'CREATE',
           type: 'chat',
         };
-
         this.connector?.getWs()?.send(JSON.stringify(chatMessage));
-        console.log('\x1B[2A');
         break;
     }
   }

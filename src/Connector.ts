@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import log from 'electron-log';
 import { EventEmitter } from 'events';
+import moment from 'moment';
 import { decodeUTF8, encodeUTF8 } from 'tweetnacl-util';
 import { v4 as uuidv4 } from 'uuid';
 import WebSocket from 'ws';
@@ -33,6 +34,7 @@ export class Connector extends EventEmitter {
   private subscriptions: ISubscription[];
   private registered: boolean;
   private user: IUser | null;
+  private historyRetrieved: boolean;
   private setInRoom: (status: boolean) => void;
 
   constructor(
@@ -50,6 +52,7 @@ export class Connector extends EventEmitter {
     this.connectedChannelId = null;
     this.subscriptions = [];
     this.user = null;
+    this.historyRetrieved = false;
     this.init();
     this.setInRoom = setInRoom;
   }
@@ -122,6 +125,31 @@ export class Connector extends EventEmitter {
     }
   }
 
+  private printMessage(jsonMessage: any) {
+    const createdAt = moment(jsonMessage.CreatedAt || jsonMessage.created_at);
+    const timestamp = `${createdAt.format('HH:mm:ss')} › `;
+    if (
+      jsonMessage.userID === serverMessageUserID ||
+      jsonMessage.user_id === serverMessageUserID
+    ) {
+      console.log(
+        chalk.blackBright(timestamp) +
+          chalk.italic.blackBright(jsonMessage.message)
+      );
+    } else {
+      console.log(
+        chalk.blackBright(timestamp) +
+          `${chalk.bold(
+            normalizeStringLength(jsonMessage.username + ':', maxUsernameLength)
+          )}${
+            jsonMessage.message.charAt(0) === '>'
+              ? chalk.green(jsonMessage.message)
+              : jsonMessage.message
+          }`
+      );
+    }
+  }
+
   private async handshake(ws: WebSocket) {
     const userQuery = await db
       .sql('accounts')
@@ -182,6 +210,53 @@ export class Connector extends EventEmitter {
     });
 
     ws.send(JSON.stringify(challengeMessage));
+
+    await this.getHistory();
+  }
+
+  private async getHistory() {
+    const historyQuery = await db
+      .sql('chat_messages')
+      .select('message_id', 'created_at')
+      .where({ channel_id: '00000000-0000-0000-0000-000000000000' })
+      .orderBy('created_at', 'desc')
+      .limit(1);
+
+    let topMessage = '00000000-0000-0000-0000-000000000000';
+    if (historyQuery.length === 1) {
+      topMessage = historyQuery[0].message_id;
+
+      const storedHistory = await db
+        .sql('chat_messages')
+        .select()
+        .orderBy('created_at', 'desc')
+        .whereRaw('created_at <= ?', historyQuery[0].created_at)
+        .limit(15);
+
+      for (const msg of storedHistory.reverse()) {
+        this.printMessage(msg);
+      }
+    }
+
+    const msgId = uuidv4();
+    const historyReqMessage = {
+      messageID: msgId,
+      method: 'RETRIEVE',
+      topMessage,
+      type: 'historyReq',
+    };
+
+    this.subscribe(msgId, (msg: any) => {
+      this.historyRetrieved = true;
+    });
+
+    this.ws?.send(JSON.stringify(historyReqMessage));
+
+    let timeout = 1;
+    while (!this.historyRetrieved) {
+      await sleep(timeout);
+      timeout *= 2;
+    }
   }
 
   private init() {
@@ -242,21 +317,18 @@ export class Connector extends EventEmitter {
           console.log();
           break;
         case 'chat':
-          if (jsonMessage.userID === serverMessageUserID) {
-            log.debug(chalk.italic.blackBright(jsonMessage.message));
-          } else {
-            log.debug(
-              `${normalizeStringLength(
-                jsonMessage.username,
-                maxUsernameLength
-              )}${
-                jsonMessage.message.charAt(0) === '>'
-                  ? chalk.green(jsonMessage.message)
-                  : jsonMessage.message
-              }`
-            );
-          }
-
+          this.printMessage(jsonMessage);
+          await db.sql('chat_messages').insert({
+            channel_id: jsonMessage.channelID,
+            created_at: jsonMessage.CreatedAt,
+            deleted_at: jsonMessage.DeletedAt,
+            id: jsonMessage.ID,
+            message: jsonMessage.message,
+            message_id: jsonMessage.messageID,
+            updated_at: jsonMessage.UpdatedAt,
+            user_id: jsonMessage.userID,
+            username: jsonMessage.username,
+          });
           break;
         case 'channelJoinRes':
           this.connectedChannelId = jsonMessage.channelID;
@@ -264,7 +336,6 @@ export class Connector extends EventEmitter {
           break;
         case 'error':
           console.log(chalk.yellow.bold(jsonMessage.message));
-          this.emit('failure');
           break;
         case 'challenge':
           const challengeResponse = {
