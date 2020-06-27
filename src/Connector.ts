@@ -5,6 +5,7 @@ import { decodeUTF8, encodeUTF8 } from 'tweetnacl-util';
 import { v4 as uuidv4 } from 'uuid';
 import WebSocket from 'ws';
 import { db, keyring } from '.';
+import { serverMessageUserID } from './constants';
 import { sleep } from './utils/sleep';
 import { fromHexString, toHexString } from './utils/typeHelpers';
 
@@ -240,7 +241,11 @@ export class Connector extends EventEmitter {
           break;
         case 'chat':
           log.debug(
-            `${chalk.bold(jsonMessage.username)}: ${
+            `${
+              jsonMessage.userID === serverMessageUserID
+                ? ''
+                : chalk.bold(jsonMessage.username) + ': '
+            }${
               jsonMessage.message.charAt(0) === '>'
                 ? chalk.green.bold(jsonMessage.message)
                 : jsonMessage.message
