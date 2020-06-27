@@ -14,6 +14,12 @@ interface ISubscription {
   id: string;
 }
 
+interface IUser {
+  username: string;
+  uuid: string;
+  hostname: string;
+}
+
 export class Connector extends EventEmitter {
   public handshakeStatus: boolean;
   public connectedChannelId: string | null;
@@ -23,6 +29,7 @@ export class Connector extends EventEmitter {
   private serverPubKey: string | null;
   private subscriptions: ISubscription[];
   private registered: boolean;
+  private user: IUser | null;
   private setInRoom: (status: boolean) => void;
 
   constructor(
@@ -39,6 +46,7 @@ export class Connector extends EventEmitter {
     this.serverPubKey = null;
     this.connectedChannelId = null;
     this.subscriptions = [];
+    this.user = null;
     this.init();
     this.setInRoom = setInRoom;
   }
@@ -87,6 +95,11 @@ export class Connector extends EventEmitter {
             uuid,
           });
           this.registered = true;
+          this.user = {
+            hostname: this.getHost(),
+            username: 'Anonymous',
+            uuid,
+          };
         }
       });
 
@@ -107,6 +120,16 @@ export class Connector extends EventEmitter {
   }
 
   private async handshake(ws: WebSocket) {
+    const userQuery = await db
+      .sql('accounts')
+      .select()
+      .where({ hostname: this.host });
+
+    if (userQuery.length > 0) {
+      const [user] = userQuery;
+      this.user = user;
+    }
+
     const serverQuery = await db
       .sql('servers')
       .select()
@@ -216,14 +239,17 @@ export class Connector extends EventEmitter {
           console.log();
           break;
         case 'chat':
-          console.log(
-            '\x1B[1A' +
-              `${chalk.bold(jsonMessage.userID)}: ${jsonMessage.message}`
+          log.debug(
+            `${chalk.bold(jsonMessage.username)}: ${
+              jsonMessage.message.charAt(0) === '>'
+                ? chalk.green.bold(jsonMessage.message)
+                : jsonMessage.message
+            }`
           );
           break;
         case 'channelJoinRes':
           this.connectedChannelId = jsonMessage.channelID;
-          log.info('Connected to channel ' + jsonMessage.name);
+          console.log('Connected to channel ' + jsonMessage.name);
           break;
         case 'error':
           console.log(chalk.yellow.bold(jsonMessage.message));

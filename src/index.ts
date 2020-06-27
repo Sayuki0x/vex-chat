@@ -9,6 +9,9 @@ import { printAscii } from './utils/printAscii';
 loadEnv();
 printAscii();
 
+// configure logger
+log.transports.console.format = '{h}:{i}:{s} › {text}';
+
 export const { SQLITE_FILENAME } = process.env;
 
 export const db = new Database();

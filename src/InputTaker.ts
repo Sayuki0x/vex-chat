@@ -4,8 +4,8 @@ import readline, { createInterface } from 'readline';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '.';
 import { Connector } from './Connector';
-import { sleep } from './utils/sleep';
 import { printHelp } from './utils/printHelp';
+import { sleep } from './utils/sleep';
 
 export class InputTaker extends EventEmitter {
   private rl: readline.Interface;
@@ -84,7 +84,7 @@ export class InputTaker extends EventEmitter {
     );
     connector.on('failure', (err) => {
       if (err) {
-        console.log('An error occurred:', chalk.yellow.bold(`${err.code}`));
+        console.log('An error occurred:', chalk.red.bold(`${err.code}`));
       }
       this.connector?.close();
       this.connector = null;
@@ -196,6 +196,30 @@ export class InputTaker extends EventEmitter {
         }
 
         break;
+      case '/nick':
+        if (!this.connector || !this.connector.handshakeStatus) {
+          console.log(
+            `Your'e not logged in to a server! Connect first with /connect`
+          );
+        }
+
+        if (commandArgs.length === 0) {
+          console.log(
+            'You need a username as a parameter, e.g. ' +
+              chalk.bold('/nick NewUsername')
+          );
+        } else {
+          const username = commandArgs.shift();
+
+          const userMessage = {
+            method: 'UPDATE',
+            type: 'user',
+            username,
+          };
+          this.connector?.getWs()?.send(JSON.stringify(userMessage));
+        }
+
+        break;
       case '/connect':
         if (!this.connector) {
           if (commandArgs.length === 0) {
@@ -232,6 +256,7 @@ export class InputTaker extends EventEmitter {
         };
 
         this.connector?.getWs()?.send(JSON.stringify(chatMessage));
+        console.log('\x1B[2A');
         break;
     }
   }

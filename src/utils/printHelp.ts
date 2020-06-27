@@ -10,4 +10,5 @@ export function printHelp() {
     'Closes the connection to a currently connected server.'
   );
   console.log(chalk.bold('/help'), 'Shows this menu.');
+  console.log(chalk.bold('/exit'), 'Exits the client.');
 }
