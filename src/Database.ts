@@ -91,16 +91,17 @@ export class Database extends EventEmitter {
       await this.sql.raw(
         `CREATE TABLE "chat_messages" (
           "id" NUMBER,
-          "created_at" datetime,
-          "updated_at" datetime,
-          "deleted_at" datetime,
-          "user_id" text,
-          "username" varchar(255),
-          "message_id" text PRIMARY KEY,
-          "method" varchar(255),
-          "message" varchar(255),
-          "channel_id" text,
-          "type" varchar(255)
+          "created_at" DATETIME,
+          "updated_at" DATETIME,
+          "deleted_at" DATETIME,
+          "user_id" TEXT,
+          "username" TEXT,
+          "message_id" TEXT PRIMARY KEY,
+          "method" TEXT,
+          "message" TEXT,
+          "channel_id" TEXT,
+          "type" TEXT,
+          "server" TEXT
         )`
       );
     }

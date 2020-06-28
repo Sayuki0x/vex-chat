@@ -222,7 +222,10 @@ export class Connector extends EventEmitter {
     const historyQuery = await db
       .sql('chat_messages')
       .select('message_id', 'created_at')
-      .where({ channel_id: '00000000-0000-0000-0000-000000000000' })
+      .where({
+        channel_id: '00000000-0000-0000-0000-000000000000',
+        server: this.host,
+      })
       .orderBy('created_at', 'desc')
       .limit(1);
 
@@ -288,6 +291,7 @@ export class Connector extends EventEmitter {
   }
 
   private init() {
+    // const ws = new WebSocket(`ws://${this.host}:${this.port}/socket`);
     const ws = new WebSocket(`wss://${this.host}/socket`);
 
     ws.on('open', async () => {
@@ -355,6 +359,7 @@ export class Connector extends EventEmitter {
             id: jsonMessage.ID,
             message: jsonMessage.message,
             message_id: jsonMessage.messageID,
+            server: this.host,
             updated_at: jsonMessage.UpdatedAt,
             user_id: jsonMessage.userID,
             username: jsonMessage.username,
