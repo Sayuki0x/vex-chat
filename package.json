@@ -32,7 +32,7 @@
   },
   "husky": {
     "hooks": {
-      "pre-commit": "yarn prettier; git add --all; lint-staged"
+      "pre-commit": "node ./scripts/versionUpdate.js; yarn prettier; git add --all; lint-staged"
     }
   },
   "dependencies": {
