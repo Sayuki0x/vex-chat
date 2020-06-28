@@ -375,7 +375,7 @@ export class Connector extends EventEmitter {
 
         case 'channelListResponse':
           this.channelList = jsonMessage.channels;
-          if (jsonMessage.channels.length > 0) {
+          if (jsonMessage.channels && jsonMessage.channels.length > 0) {
             console.log(chalk.bold('CHANNEL LIST'));
             for (const channel of jsonMessage.channels) {
               console.log(
