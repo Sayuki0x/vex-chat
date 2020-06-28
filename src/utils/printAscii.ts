@@ -15,9 +15,9 @@ export function printAscii() {
         '        v:::::::v        e::::::::e             x:::::xx:::::x   \n' +
         '         v:::::v          e::::::::eeeeeeee    x:::::x  x:::::x  \n' +
         '          v:::v            ee:::::::::::::e   x:::::x    x:::::x \n' +
-        '           vvv               eeeeeeeeeeeeee  xxxxxxx      xxxxxxx\n'
+        '           vvv               eeeeeeeeeeeeee  xxxxxxx      xxxxxxx'
     )
   );
-  console.log('Vex CLI client version v0.0.1');
+  console.log('Vex CLI client version v0.1.0');
   printHelp();
 }

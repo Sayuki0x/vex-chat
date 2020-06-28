@@ -12,5 +12,4 @@ export function printHelp() {
   );
   console.log(chalk.bold('/help'), 'Shows this menu.');
   console.log(chalk.bold('/exit'), 'Exits the client.');
-  console.log('                                       ');
 }

@@ -51,6 +51,7 @@ export class Connector extends EventEmitter {
   private setInRoom: (status: boolean) => void;
   private serverAlive: boolean;
   private serverMessageDisplayed: boolean;
+  private pingInterval: NodeJS.Timeout | null;
 
   constructor(
     host: string,
@@ -72,6 +73,7 @@ export class Connector extends EventEmitter {
     this.serverMessageDisplayed = false;
     this.authed = false;
     this.channelList = [];
+    this.pingInterval = null;
     this.init();
     this.setInRoom = setInRoom;
   }
@@ -85,6 +87,9 @@ export class Connector extends EventEmitter {
   }
 
   public close() {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+    }
     this.ws?.close();
   }
 
@@ -288,7 +293,7 @@ export class Connector extends EventEmitter {
 
   private async startPing() {
     let failedCount = 0;
-    while (true) {
+    this.pingInterval = setInterval(async () => {
       if (this.serverAlive !== true) {
         failedCount++;
       } else {
@@ -296,9 +301,8 @@ export class Connector extends EventEmitter {
       }
       if (failedCount > 5) {
         console.log('Server not responding, maybe down?');
-        this.ws?.close();
-        this.emit('failure');
-        break;
+        this.close();
+        return;
       }
       this.serverAlive = false;
       const pongID = uuidv4();
@@ -306,8 +310,7 @@ export class Connector extends EventEmitter {
         this.serverAlive = true;
       });
       this.ws?.send(JSON.stringify({ type: 'ping', messageID: pongID }));
-      await sleep(10000);
-    }
+    }, 10000);
   }
 
   private init() {
@@ -393,7 +396,12 @@ export class Connector extends EventEmitter {
             console.log(chalk.bold('CHANNEL LIST'));
             for (const channel of jsonMessage.channels) {
               console.log(
-                `${channel.ID.toString()} ${channel.name} ${channel.channelID}`
+                `${normalizeStringLength(
+                  channel.ID.toString(),
+                  4
+                )} ${normalizeStringLength(channel.name, 12)} ${
+                  channel.channelID
+                }`
               );
             }
             console.log(
@@ -419,7 +427,7 @@ export class Connector extends EventEmitter {
         case 'channelJoinRes':
           if (jsonMessage.status === 'SUCCESS') {
             this.connectedChannelId = jsonMessage.channelID;
-            console.log('Connected to channel ' + jsonMessage.name);
+            console.log(chalk.bold(jsonMessage.name.toUpperCase()));
 
             await this.getHistory(jsonMessage.channelID);
           }

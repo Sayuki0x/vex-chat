@@ -45,8 +45,11 @@ export class InputTaker extends EventEmitter {
     }
 
     console.log(
-      `Please enter a command. (Use ${chalk.bold('/help')} to see the menu)`
+      chalk.dim(
+        `Please enter a command. (Use ${chalk.bold('/help')} to see the menu)`
+      )
     );
+    console.log();
   }
 
   private shutdown() {
@@ -96,7 +99,9 @@ export class InputTaker extends EventEmitter {
     });
     connector.on('success', () => {
       if (!spinnerResolved) {
-        spinner.succeed();
+        spinner.succeed(
+          `Login succeeded to vex server at ${chalk.bold(host)} 🎉\n`
+        );
         spinnerResolved = true;
       }
       this.rl.question('', this.handleCommand);
@@ -104,7 +109,7 @@ export class InputTaker extends EventEmitter {
 
     connector.on('close', () => {
       if (!spinnerResolved) {
-        spinner.fail();
+        spinner.fail(`Login failed to vex server at ${chalk.bold(host)}\n`);
         spinnerResolved = true;
       }
       this.connector = null;
@@ -154,6 +159,14 @@ export class InputTaker extends EventEmitter {
             this.connector?.getWs()?.send(JSON.stringify(msg));
             break;
           }
+        }
+        break;
+      case '/close':
+        if (this.connector) {
+          this.connector.close();
+          console.log(`Server connection closed.\n`);
+        } else {
+          console.log(`You aren't connected to a server.\n`);
         }
         break;
       case '/help':
@@ -206,30 +219,19 @@ export class InputTaker extends EventEmitter {
           this.connector?.getWs()?.send(JSON.stringify(msg));
           break;
         }
-        // if (arg === 'join') {
-        //   const joinChannelMsgId = uuidv4();
-        //   const msg = {
-        //     channelID: commandArgs.shift(),
-        //     messageID: joinChannelMsgId,
-        //     method: 'JOIN',
-        //     type: 'channel',
-        //   };
-
-        //   this.connector?.getWs()?.send(JSON.stringify(msg));
-        // }
-
         break;
       case '/nick':
         if (!this.connector || !this.connector.handshakeStatus) {
           console.log(
-            `Your'e not logged in to a server! Connect first with /connect`
+            `Your'e not logged in to a server! Connect first with /connect\n`
           );
         }
 
         if (commandArgs.length === 0) {
           console.log(
             'You need a username as a parameter, e.g. ' +
-              chalk.bold('/nick NewUsername')
+              chalk.bold('/nick NewUsername') +
+              '\n'
           );
         } else {
           const username = commandArgs.shift();
@@ -255,7 +257,7 @@ export class InputTaker extends EventEmitter {
           }
         } else {
           console.log(
-            'You are already logged in to a server. Close connection with /close first.'
+            'You are already logged in to a server. Close connection with /close first.\n'
           );
         }
         break;
@@ -274,7 +276,7 @@ export class InputTaker extends EventEmitter {
           this.connector?.getWs()?.send(JSON.stringify(chatMessage));
           break;
         } else {
-          console.log('No command ' + command);
+          console.log('No command ' + chalk.bold(command) + '\n');
         }
     }
   }
