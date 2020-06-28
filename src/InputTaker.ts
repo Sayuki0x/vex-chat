@@ -12,7 +12,6 @@ export class InputTaker extends EventEmitter {
   private rl: readline.Interface;
   private connector: Connector | null;
   private inRoom: boolean;
-  private connectedChannel: string | null;
 
   constructor() {
     super();
@@ -24,7 +23,6 @@ export class InputTaker extends EventEmitter {
     this.handleCommand = this.handleCommand.bind(this);
     this.shutdown = this.shutdown.bind(this);
     this.handleConnect = this.handleConnect.bind(this);
-    this.connectedChannel = null;
     this.init();
     this.inRoom = false;
   }
@@ -237,10 +235,10 @@ export class InputTaker extends EventEmitter {
           const username = commandArgs.shift();
 
           const userMessage = {
+            channelID: this.connector?.connectedChannelId,
             method: 'UPDATE',
             type: 'user',
             username,
-            channelID: this.connector?.connectedChannelId,
           };
           this.connector?.getWs()?.send(JSON.stringify(userMessage));
         }

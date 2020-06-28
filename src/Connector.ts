@@ -230,12 +230,12 @@ export class Connector extends EventEmitter {
     // await this.getHistory();
   }
 
-  private async getHistory() {
+  private async getHistory(channelID: string) {
     const historyQuery = await db
       .sql('chat_messages')
       .select('message_id', 'created_at')
       .where({
-        channel_id: '00000000-0000-0000-0000-000000000000',
+        channel_id: channelID,
         server: this.host,
       })
       .orderBy('created_at', 'desc')
@@ -414,6 +414,8 @@ export class Connector extends EventEmitter {
           if (jsonMessage.status === 'SUCCESS') {
             this.connectedChannelId = jsonMessage.channelID;
             console.log('Connected to channel ' + jsonMessage.name);
+
+            await this.getHistory(jsonMessage.channelID);
           }
           break;
         case 'error':
