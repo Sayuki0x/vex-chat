@@ -1,5 +1,5 @@
 {
-  "name": "vex-chat-cli",
+  "name": "vex-chat",
   "version": "0.1.0",
   "description": "A CLI client for the Vex chat backend.",
   "main": "./dist/index.js",
