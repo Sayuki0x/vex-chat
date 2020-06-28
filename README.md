@@ -1,23 +1,16 @@
-# typescript-boilerplate
+# vex-chat cli client
 
-A quick start repo for typescript projects.
+This is a reference frontend in typescript for the Vex chat backend.
 
-Contains these tools:
+## installing
 
-1. Prettier for code formatting
-2. TSLint for linting
-3. Husky & lint-staged for pre-commit hooks (currently foirmats and then lints the code pre-commit)
+You can install from npm...
 
-All of your typescript files should go in the `./src` directory, and the compiled javscript will be available at `./dist`.
+```
+npm i -g vex-chat
+```
 
-## Setup
+## running
 
-- Install the dependencies
-
-`yarn`
-
-- Start the project. Typescript will be compiled automatically.
-
-`yarn start`
-
-You can now lint your project with `yarn lint` or `yarn lint-fix`
+After installation, you can run with the command `vex-chat`
+I host an example server at `vex.extrahash.org` that is open for public registration.
