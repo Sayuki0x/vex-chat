@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import log from 'electron-log';
 import { EventEmitter } from 'events';
 import moment from 'moment';
 import { decodeUTF8, encodeUTF8 } from 'tweetnacl-util';
@@ -7,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import WebSocket from 'ws';
 import { db, keyring } from './cli';
 import { serverMessageUserID } from './constants';
+import { normalizeStrLen } from './utils/normalizeStrLen';
 import { sleep } from './utils/sleep';
 import { fromHexString, toHexString } from './utils/typeHelpers';
 
@@ -48,16 +48,11 @@ export class Connector extends EventEmitter {
   private registered: boolean;
   private user: IUser | null;
   private historyRetrieved: boolean;
-  private setInRoom: (status: boolean) => void;
   private serverAlive: boolean;
   private serverMessageDisplayed: boolean;
   private pingInterval: NodeJS.Timeout | null;
 
-  constructor(
-    host: string,
-    port: number,
-    setInRoom: (status: boolean) => void
-  ) {
+  constructor(host: string, port: number) {
     super();
     this.ws = null;
     this.handshakeStatus = false;
@@ -75,7 +70,6 @@ export class Connector extends EventEmitter {
     this.channelList = [];
     this.pingInterval = null;
     this.init();
-    this.setInRoom = setInRoom;
   }
 
   public getHost() {
@@ -146,28 +140,6 @@ export class Connector extends EventEmitter {
     while (!this.registered) {
       await sleep(timeout);
       timeout *= 2;
-    }
-  }
-
-  private printMessage(jsonMessage: any) {
-    const createdAt = moment(jsonMessage.CreatedAt || jsonMessage.created_at);
-    const timestamp = `${createdAt.format('HH:mm:ss')} › `;
-    if (
-      jsonMessage.userID === serverMessageUserID ||
-      jsonMessage.user_id === serverMessageUserID
-    ) {
-      console.log(chalk.dim(timestamp) + chalk.dim(jsonMessage.message));
-    } else {
-      console.log(
-        chalk.dim(timestamp) +
-          `${chalk.bold(
-            normalizeStringLength(jsonMessage.username, maxUsernameLength)
-          )}${
-            jsonMessage.message.charAt(0) === '>'
-              ? chalk.green(jsonMessage.message)
-              : jsonMessage.message
-          }`
-      );
     }
   }
 
@@ -265,7 +237,12 @@ export class Connector extends EventEmitter {
       }
 
       for (const msg of storedHistory.reverse()) {
-        this.printMessage(msg);
+        this.emit(
+          'msg',
+          msg,
+          msg.userID === serverMessageUserID ||
+            msg.user_id === serverMessageUserID
+        );
       }
     }
 
@@ -364,14 +341,18 @@ export class Connector extends EventEmitter {
           if (jsonMessage.status === 'SUCCESS') {
             this.emit('success');
             this.authed = true;
-            this.setInRoom(true);
           }
           break;
         case 'welcomeMessage':
           console.log(chalk.bold(jsonMessage.message) + '\n');
           break;
         case 'chat':
-          this.printMessage(jsonMessage);
+          this.emit(
+            'msg',
+            jsonMessage,
+            jsonMessage.userID === serverMessageUserID ||
+              jsonMessage.user_id === serverMessageUserID
+          );
           try {
             await db.sql('chat_messages').insert({
               channel_id: jsonMessage.channelID,
@@ -387,7 +368,9 @@ export class Connector extends EventEmitter {
             });
             break;
           } catch (err) {
-            console.log(err);
+            if (err.errno !== 19) {
+              console.error(err);
+            }
           }
 
         case 'channelListResponse':
@@ -396,12 +379,10 @@ export class Connector extends EventEmitter {
             console.log(chalk.bold('CHANNEL LIST'));
             for (const channel of jsonMessage.channels) {
               console.log(
-                `${normalizeStringLength(
-                  channel.ID.toString(),
-                  4
-                )} ${normalizeStringLength(channel.name, 12)} ${
-                  channel.channelID
-                }`
+                `${normalizeStrLen(channel.ID.toString(), 4)} ${normalizeStrLen(
+                  channel.name,
+                  12
+                )} ${channel.channelID}`
               );
             }
             console.log(
@@ -456,11 +437,4 @@ export class Connector extends EventEmitter {
 
     this.ws = ws;
   }
-}
-
-function normalizeStringLength(s: string, len: number) {
-  while (s.length < len) {
-    s += ' ';
-  }
-  return s;
 }

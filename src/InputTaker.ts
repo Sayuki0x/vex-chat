@@ -1,34 +1,34 @@
 import chalk from 'chalk';
 import { EventEmitter } from 'events';
+import moment from 'moment';
 import ora from 'ora';
 import readline, { createInterface } from 'readline';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from './cli';
 import { Connector } from './Connector';
+import { normalizeStrLen } from './utils/normalizeStrLen';
 import { printHelp } from './utils/printHelp';
 import { sleep } from './utils/sleep';
+
+const lambda = chalk.green.bold('λ ');
 
 export class InputTaker extends EventEmitter {
   private rl: readline.Interface;
   private connector: Connector | null;
-  private inRoom: boolean;
+  private currentInput: string;
 
   constructor() {
     super();
     this.rl = createInterface({
       input: process.stdin,
       output: process.stdout,
+      prompt: '',
     });
     this.connector = null;
-    this.handleCommand = this.handleCommand.bind(this);
+    this.currentInput = '';
     this.shutdown = this.shutdown.bind(this);
     this.handleConnect = this.handleConnect.bind(this);
     this.init();
-    this.inRoom = false;
-  }
-
-  public setInRoom(status: boolean) {
-    this.inRoom = status;
   }
 
   public getRl() {
@@ -38,10 +38,11 @@ export class InputTaker extends EventEmitter {
   private async init() {
     this.rl.on('SIGINT', this.shutdown);
     process.on('SIGINT', this.shutdown);
-    this.rl.question('', this.handleCommand);
 
+    let timeout = 1;
     while (!db.ready) {
-      await sleep(500);
+      await sleep(timeout);
+      timeout *= 2;
     }
 
     console.log(
@@ -50,6 +51,35 @@ export class InputTaker extends EventEmitter {
       )
     );
     console.log();
+
+    process.stdin.on('keypress', (str: string, key) => {
+      if (key.sequence !== '\r') {
+        this.currentInput += str;
+      } else {
+        this.currentInput = '';
+      }
+    });
+
+    this.rl.on('line', (line) => {
+      this.action(line.trim());
+    });
+  }
+
+  private printMessage(jsonMessage: any, serverMessage: boolean) {
+    const createdAt = moment(jsonMessage.CreatedAt || jsonMessage.created_at);
+    const timestamp = `${createdAt.format('HH:mm:ss')} › `;
+    if (serverMessage) {
+      console.log(chalk.dim(timestamp) + chalk.dim(jsonMessage.message));
+    } else {
+      console.log(
+        chalk.dim(timestamp) +
+          `${chalk.bold(normalizeStrLen(jsonMessage.username, 15))}${
+            jsonMessage.message.charAt(0) === '>'
+              ? chalk.green(jsonMessage.message)
+              : jsonMessage.message
+          }`
+      );
+    }
   }
 
   private shutdown() {
@@ -62,7 +92,7 @@ export class InputTaker extends EventEmitter {
 
   private handleConnect(url: string) {
     const spinner = ora({
-      color: 'cyan',
+      color: 'magenta',
       discardStdin: false,
       text: `Attempting login to vex server at ${chalk.bold(url)}\n`,
     }).start();
@@ -84,18 +114,13 @@ export class InputTaker extends EventEmitter {
 
     let spinnerResolved = false;
 
-    const connector: Connector | null = new Connector(
-      host,
-      port,
-      this.setInRoom.bind(this)
-    );
+    const connector: Connector | null = new Connector(host, port);
     connector.on('failure', (err) => {
       if (err) {
         console.log('An error occurred:', chalk.red.bold(`${err.code}`));
       }
       this.connector?.close();
       this.connector = null;
-      this.rl.question('', this.handleCommand);
     });
     connector.on('success', () => {
       if (!spinnerResolved) {
@@ -104,24 +129,22 @@ export class InputTaker extends EventEmitter {
         );
         spinnerResolved = true;
       }
-      this.rl.question('', this.handleCommand);
     });
-
     connector.on('close', () => {
       if (!spinnerResolved) {
         spinner.fail(`Login failed to vex server at ${chalk.bold(host)}\n`);
         spinnerResolved = true;
       }
       this.connector = null;
-      this.rl.question('', this.handleCommand);
+    });
+    connector.on('msg', (msg: any, isServerMsg: boolean) => {
+      readline.clearLine(process.stdin, -1);
+      readline.cursorTo(process.stdin, 0);
+      this.printMessage(msg, isServerMsg);
+      process.stdout.write(this.currentInput);
     });
 
     this.connector = connector;
-  }
-
-  private handleCommand(command: string) {
-    this.action(command);
-    this.rl.question('', this.handleCommand);
   }
 
   private async action(command: string) {
