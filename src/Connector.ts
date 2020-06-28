@@ -1,11 +1,10 @@
 import chalk from 'chalk';
 import { EventEmitter } from 'events';
-import moment from 'moment';
-import { decodeUTF8, encodeUTF8 } from 'tweetnacl-util';
+import { decodeUTF8 } from 'tweetnacl-util';
 import { v4 as uuidv4 } from 'uuid';
 import WebSocket from 'ws';
 import { db, keyring } from './cli';
-import { serverMessageUserID } from './constants';
+import { serverMessageUserID } from './constants/serverID';
 import { normalizeStrLen } from './utils/normalizeStrLen';
 import { sleep } from './utils/sleep';
 import { fromHexString, toHexString } from './utils/typeHelpers';

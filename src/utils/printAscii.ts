@@ -1,10 +1,11 @@
 import chalk from 'chalk';
+import { version } from '../constants/version';
 import { printHelp } from './printHelp';
 
 export function printAscii() {
   console.log(
     chalk.green.bold(
-      'vvvvvvv           vvvvvvv    eeeeeeeeeeee    xxxxxxx      xxxxxxx\n' +
+      '\nvvvvvvv           vvvvvvv    eeeeeeeeeeee    xxxxxxx      xxxxxxx\n' +
         ' v:::::v         v:::::v   ee::::::::::::ee   x:::::x    x:::::x \n' +
         '  v:::::v       v:::::v   e::::::eeeee:::::ee  x:::::x  x:::::x  \n' +
         '   v:::::v     v:::::v   e::::::e     e:::::e   x:::::xx:::::x   \n' +
@@ -15,9 +16,9 @@ export function printAscii() {
         '        v:::::::v        e::::::::e             x:::::xx:::::x   \n' +
         '         v:::::v          e::::::::eeeeeeee    x:::::x  x:::::x  \n' +
         '          v:::v            ee:::::::::::::e   x:::::x    x:::::x \n' +
-        '           vvv               eeeeeeeeeeeeee  xxxxxxx      xxxxxxx'
+        '           vvv               eeeeeeeeeeeeee  xxxxxxx      xxxxxxx\n'
     )
   );
-  console.log('Vex CLI client version v0.1.0');
+  console.log(`Vex CLI client version ${chalk.bold('v0.1.0')}`);
   printHelp();
 }
