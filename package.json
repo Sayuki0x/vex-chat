@@ -10,7 +10,7 @@
     "vex-chat": "./dist/cli.js"
   },
   "scripts": {
-    "start": "node ./dist/index.js",
+    "start": "node ./dist/cli.js",
     "build": "node ./node_modules/typescript/bin/tsc; chmod +x ./dist/cli.js",
     "prepack": "yarn build",
     "prettier": "node ./node_modules/prettier/bin-prettier.js '**/*.{ts,tsx,json,md}' --trailing-comma es5 --ignore-path .gitignore --single-quote --arrow-parens always --write",
