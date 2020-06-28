@@ -4,7 +4,7 @@ import chalk from 'chalk';
 import log from 'electron-log';
 import { EventEmitter } from 'events';
 import knex from 'knex';
-import { input, SQLITE_FILENAME } from '.';
+import { input, SQLITE_FILENAME } from './cli';
 
 export class Database extends EventEmitter {
   public ready: boolean;

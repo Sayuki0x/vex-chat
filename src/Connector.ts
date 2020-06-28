@@ -5,7 +5,7 @@ import moment from 'moment';
 import { decodeUTF8, encodeUTF8 } from 'tweetnacl-util';
 import { v4 as uuidv4 } from 'uuid';
 import WebSocket from 'ws';
-import { db, keyring } from '.';
+import { db, keyring } from './cli';
 import { serverMessageUserID } from './constants';
 import { sleep } from './utils/sleep';
 import { fromHexString, toHexString } from './utils/typeHelpers';

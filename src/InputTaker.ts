@@ -3,7 +3,7 @@ import { EventEmitter } from 'events';
 import ora from 'ora';
 import readline, { createInterface } from 'readline';
 import { v4 as uuidv4 } from 'uuid';
-import { db } from '.';
+import { db } from './cli';
 import { Connector } from './Connector';
 import { printHelp } from './utils/printHelp';
 import { sleep } from './utils/sleep';
