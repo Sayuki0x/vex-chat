@@ -248,8 +248,9 @@ export class Connector extends EventEmitter {
       const storedHistory = await db
         .sql('chat_messages')
         .select()
-        .orderBy('created_at', 'desc')
         .whereRaw('created_at <= ?', historyQuery[0].created_at)
+        .andWhere({ channel_id: channelID })
+        .orderBy('created_at', 'desc')
         .limit(15);
 
       let t = 1;
@@ -265,6 +266,7 @@ export class Connector extends EventEmitter {
 
     const msgId = uuidv4();
     const historyReqMessage = {
+      channelID: this.connectedChannelId,
       messageID: msgId,
       method: 'RETRIEVE',
       topMessage,
@@ -332,7 +334,6 @@ export class Connector extends EventEmitter {
     });
 
     ws.on('close', () => {
-      console.log(chalk.yellow.bold('Connection closed.'));
       this.emit('close');
     });
 
@@ -368,19 +369,24 @@ export class Connector extends EventEmitter {
           break;
         case 'chat':
           this.printMessage(jsonMessage);
-          await db.sql('chat_messages').insert({
-            channel_id: jsonMessage.channelID,
-            created_at: jsonMessage.CreatedAt,
-            deleted_at: jsonMessage.DeletedAt,
-            id: jsonMessage.ID,
-            message: jsonMessage.message,
-            message_id: jsonMessage.messageID,
-            server: this.host,
-            updated_at: jsonMessage.UpdatedAt,
-            user_id: jsonMessage.userID,
-            username: jsonMessage.username,
-          });
-          break;
+          try {
+            await db.sql('chat_messages').insert({
+              channel_id: jsonMessage.channelID,
+              created_at: jsonMessage.CreatedAt,
+              deleted_at: jsonMessage.DeletedAt,
+              id: jsonMessage.ID,
+              message: jsonMessage.message,
+              message_id: jsonMessage.messageID,
+              server: this.host,
+              updated_at: jsonMessage.UpdatedAt,
+              user_id: jsonMessage.userID,
+              username: jsonMessage.username,
+            });
+            break;
+          } catch (err) {
+            console.log(err);
+          }
+
         case 'channelListResponse':
           this.channelList = jsonMessage.channels;
           if (jsonMessage.channels.length > 0) {

@@ -262,14 +262,6 @@ export class InputTaker extends EventEmitter {
       case '/exit':
         this.shutdown();
         break;
-      case '/close':
-        if (this.connector) {
-          this.connector.close();
-          this.connector = null;
-        } else {
-          console.log(`There isn't a connection open.`);
-        }
-        break;
       default:
         if (this.connector?.connectedChannelId !== null) {
           const chatMessage = {
