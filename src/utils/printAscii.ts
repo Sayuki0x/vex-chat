@@ -19,6 +19,6 @@ export function printAscii() {
         '           vvv               eeeeeeeeeeeeee  xxxxxxx      xxxxxxx\n'
     )
   );
-  console.log(`Vex CLI client version ${chalk.bold('v0.1.0')}`);
+  console.log(`Vex CLI client version ${chalk.bold(version)}`);
   printHelp();
 }
