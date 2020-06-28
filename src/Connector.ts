@@ -311,8 +311,8 @@ export class Connector extends EventEmitter {
   }
 
   private init() {
-    const ws = new WebSocket(`ws://${this.host}:${this.port}/socket`);
-    // const ws = new WebSocket(`wss://${this.host}/socket`);
+    // const ws = new WebSocket(`ws://${this.host}:${this.port}/socket`);
+    const ws = new WebSocket(`wss://${this.host}/socket`);
 
     ws.on('open', async () => {
       // console.log(chalk.green.bold('Connected!'));
