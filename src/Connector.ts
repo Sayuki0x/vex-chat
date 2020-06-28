@@ -22,12 +22,24 @@ interface IUser {
   hostname: string;
 }
 
+interface IChannel {
+  ID: number;
+  CreatedAt: string;
+  UpdatedAt: string;
+  DeletedAt: string;
+  channelID: string;
+  admin: string;
+  public: boolean;
+  name: string;
+}
+
 const maxUsernameLength = 15;
 
 export class Connector extends EventEmitter {
   public handshakeStatus: boolean;
   public connectedChannelId: string | null;
   public authed: boolean;
+  public channelList: IChannel[];
   private ws: WebSocket | null;
   private host: string;
   private port: number;
@@ -59,6 +71,7 @@ export class Connector extends EventEmitter {
     this.serverAlive = true;
     this.serverMessageDisplayed = false;
     this.authed = false;
+    this.channelList = [];
     this.init();
     this.setInRoom = setInRoom;
   }
@@ -138,14 +151,12 @@ export class Connector extends EventEmitter {
       jsonMessage.userID === serverMessageUserID ||
       jsonMessage.user_id === serverMessageUserID
     ) {
-      console.log(
-        chalk.gray(timestamp) + chalk.italic.gray(jsonMessage.message)
-      );
+      console.log(chalk.dim(timestamp) + chalk.dim(jsonMessage.message));
     } else {
       console.log(
-        chalk.gray(timestamp) +
+        chalk.dim(timestamp) +
           `${chalk.bold(
-            normalizeStringLength(jsonMessage.username + ':', maxUsernameLength)
+            normalizeStringLength(jsonMessage.username, maxUsernameLength)
           )}${
             jsonMessage.message.charAt(0) === '>'
               ? chalk.green(jsonMessage.message)
@@ -216,7 +227,7 @@ export class Connector extends EventEmitter {
 
     ws.send(JSON.stringify(challengeMessage));
 
-    await this.getHistory();
+    // await this.getHistory();
   }
 
   private async getHistory() {
@@ -298,8 +309,8 @@ export class Connector extends EventEmitter {
   }
 
   private init() {
-    // const ws = new WebSocket(`ws://${this.host}:${this.port}/socket`);
-    const ws = new WebSocket(`wss://${this.host}/socket`);
+    const ws = new WebSocket(`ws://${this.host}:${this.port}/socket`);
+    // const ws = new WebSocket(`wss://${this.host}/socket`);
 
     ws.on('open', async () => {
       // console.log(chalk.green.bold('Connected!'));
@@ -370,9 +381,40 @@ export class Connector extends EventEmitter {
             username: jsonMessage.username,
           });
           break;
+        case 'channelListResponse':
+          this.channelList = jsonMessage.channels;
+          if (jsonMessage.channels.length > 0) {
+            console.log(chalk.bold('CHANNEL LIST'));
+            for (const channel of jsonMessage.channels) {
+              console.log(
+                `${channel.ID.toString()} ${channel.name} ${channel.channelID}`
+              );
+            }
+            console.log(
+              chalk.dim(
+                'Use /join # to join a channel. e.g. ' +
+                  chalk.bold('/join 1') +
+                  '\n'
+              )
+            );
+          } else {
+            console.log(chalk.bold('CHANNEL LIST'));
+            console.log(chalk.dim('The channel list is empty!'));
+            console.log(
+              chalk.dim(
+                'Use /channel new <Name> to create a channel. e.g. ' +
+                  chalk.bold('/channel new General') +
+                  '\n'
+              )
+            );
+          }
+
+          break;
         case 'channelJoinRes':
-          this.connectedChannelId = jsonMessage.channelID;
-          console.log('Connected to channel ' + jsonMessage.name);
+          if (jsonMessage.status === 'SUCCESS') {
+            this.connectedChannelId = jsonMessage.channelID;
+            console.log('Connected to channel ' + jsonMessage.name);
+          }
           break;
         case 'error':
           console.log(chalk.yellow.bold(jsonMessage.message));

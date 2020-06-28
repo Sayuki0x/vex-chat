@@ -12,6 +12,7 @@ export class InputTaker extends EventEmitter {
   private rl: readline.Interface;
   private connector: Connector | null;
   private inRoom: boolean;
+  private connectedChannel: string | null;
 
   constructor() {
     super();
@@ -23,6 +24,7 @@ export class InputTaker extends EventEmitter {
     this.handleCommand = this.handleCommand.bind(this);
     this.shutdown = this.shutdown.bind(this);
     this.handleConnect = this.handleConnect.bind(this);
+    this.connectedChannel = null;
     this.init();
     this.inRoom = false;
   }
@@ -60,19 +62,15 @@ export class InputTaker extends EventEmitter {
   private handleConnect(url: string) {
     const spinner = ora({
       color: 'cyan',
-      text: `Attempting login to vex server at ${chalk.bold(url)}\n`,
       discardStdin: false,
+      text: `Attempting login to vex server at ${chalk.bold(url)}\n`,
     }).start();
     const components = url.split(':');
     let port = 8000;
     let host = 'localhost';
 
     if (components.length === 0) {
-      console.log(
-        chalk.yellow.bold(
-          'You need to provide at least an address, e.g., 127.0.0.1'
-        )
-      );
+      console.log('You need to provide at least an address, e.g., 127.0.0.1');
     }
 
     if (components.length >= 1) {
@@ -131,19 +129,42 @@ export class InputTaker extends EventEmitter {
     }
 
     const baseCommand = commandArgs.shift();
-
+    console.log('\x1B[2A');
     switch (baseCommand) {
+      case '/join':
+        if (!this.connector || !this.connector.handshakeStatus) {
+          console.log(
+            `Your'e not logged in to a server! Connect first with /connect`
+          );
+        }
+        if (commandArgs.length === 0) {
+          console.log(
+            'A channel number is required, e.g. ' + chalk.bold('/join 1')
+          );
+          break;
+        }
+        const id = commandArgs.shift();
+        for (const channel of this.connector!.channelList) {
+          if (channel.ID === Number(id)) {
+            const joinChannelMsgId = uuidv4();
+            const msg = {
+              channelID: channel.channelID,
+              messageID: joinChannelMsgId,
+              method: 'JOIN',
+              type: 'channel',
+            };
+            this.connector?.getWs()?.send(JSON.stringify(msg));
+            break;
+          }
+        }
+        break;
       case '/help':
-        console.log('\x1B[2A');
         printHelp();
         break;
       case '/channel':
-        console.log('\x1B[2A');
         if (!this.connector || !this.connector.handshakeStatus) {
           console.log(
-            chalk.yellow.bold(
-              'You need to login first! Use /connect hostname. See /help for details.'
-            )
+            'You need to login first! Use /connect hostname. See /help for details.'
           );
           break;
         }
@@ -151,17 +172,13 @@ export class InputTaker extends EventEmitter {
         const arg = commandArgs.shift();
         if (!arg) {
           console.log(
-            chalk.yellow.bold(
-              '/channel command requires an argument [new, ls]. See /help for details.'
-            )
+            '/channel command requires an argument [new, ls]. See /help for details.'
           );
         }
         if (arg === 'new') {
           if (commandArgs.length === 0) {
             console.log(
-              chalk.yellow.bold(
-                '/channel new requires a name argument, eg. /channel new General. See /help for details.'
-              )
+              '/channel new requires a name argument, eg. /channel new General. See /help for details.'
             );
           } else {
             const newChannelMsgId = uuidv4();
@@ -188,32 +205,23 @@ export class InputTaker extends EventEmitter {
             type: 'channel',
           };
 
-          this.connector?.subscribe(listChannelMsgId, (lsMsg: any) => {
-            for (const channel of lsMsg.channels) {
-              console.log(
-                `${channel.ID.toString()} ${channel.name} ${channel.channelID}`
-              );
-            }
-          });
-
           this.connector?.getWs()?.send(JSON.stringify(msg));
           break;
         }
-        if (arg === 'join') {
-          const joinChannelMsgId = uuidv4();
-          const msg = {
-            channelID: commandArgs.shift(),
-            messageID: joinChannelMsgId,
-            method: 'JOIN',
-            type: 'channel',
-          };
+        // if (arg === 'join') {
+        //   const joinChannelMsgId = uuidv4();
+        //   const msg = {
+        //     channelID: commandArgs.shift(),
+        //     messageID: joinChannelMsgId,
+        //     method: 'JOIN',
+        //     type: 'channel',
+        //   };
 
-          this.connector?.getWs()?.send(JSON.stringify(msg));
-        }
+        //   this.connector?.getWs()?.send(JSON.stringify(msg));
+        // }
 
         break;
       case '/nick':
-        console.log('\x1B[2A');
         if (!this.connector || !this.connector.handshakeStatus) {
           console.log(
             `Your'e not logged in to a server! Connect first with /connect`
@@ -232,14 +240,13 @@ export class InputTaker extends EventEmitter {
             method: 'UPDATE',
             type: 'user',
             username,
+            channelID: this.connector?.connectedChannelId,
           };
           this.connector?.getWs()?.send(JSON.stringify(userMessage));
         }
 
         break;
       case '/connect':
-        console.log('\x1B[2A');
-
         if (!this.connector) {
           if (commandArgs.length === 0) {
             console.log('Enter the address:port of the vex server.');
@@ -255,29 +262,30 @@ export class InputTaker extends EventEmitter {
         }
         break;
       case '/exit':
-        console.log('\x1B[2A');
         this.shutdown();
         break;
       case '/close':
-        console.log('\x1B[2A');
         if (this.connector) {
           this.connector.close();
           this.connector = null;
-          console.log('Connection closed successfully.');
         } else {
           console.log(`There isn't a connection open.`);
         }
         break;
       default:
-        console.log('\x1B[2A');
-        const chatMessage = {
-          message: command,
-          messageID: uuidv4(),
-          method: 'CREATE',
-          type: 'chat',
-        };
-        this.connector?.getWs()?.send(JSON.stringify(chatMessage));
-        break;
+        if (this.connector?.connectedChannelId !== null) {
+          const chatMessage = {
+            channelID: this.connector?.connectedChannelId,
+            message: command,
+            messageID: uuidv4(),
+            method: 'CREATE',
+            type: 'chat',
+          };
+          this.connector?.getWs()?.send(JSON.stringify(chatMessage));
+          break;
+        } else {
+          console.log('No command ' + command);
+        }
     }
   }
 }
