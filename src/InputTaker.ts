@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import { EventEmitter } from 'events';
+import ora from 'ora';
 import readline, { createInterface } from 'readline';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '.';
@@ -57,6 +58,11 @@ export class InputTaker extends EventEmitter {
   }
 
   private handleConnect(url: string) {
+    const spinner = ora({
+      color: 'cyan',
+      text: `Attempting login to vex server at ${chalk.bold(url)}\n`,
+      discardStdin: false,
+    }).start();
     const components = url.split(':');
     let port = 8000;
     let host = 'localhost';
@@ -77,6 +83,8 @@ export class InputTaker extends EventEmitter {
       port = Number(components[1]);
     }
 
+    let spinnerResolved = false;
+
     const connector: Connector | null = new Connector(
       host,
       port,
@@ -91,10 +99,18 @@ export class InputTaker extends EventEmitter {
       this.rl.question('', this.handleCommand);
     });
     connector.on('success', () => {
+      if (!spinnerResolved) {
+        spinner.succeed();
+        spinnerResolved = true;
+      }
       this.rl.question('', this.handleCommand);
     });
 
     connector.on('close', () => {
+      if (!spinnerResolved) {
+        spinner.fail();
+        spinnerResolved = true;
+      }
       this.connector = null;
       this.rl.question('', this.handleCommand);
     });
@@ -118,10 +134,8 @@ export class InputTaker extends EventEmitter {
 
     switch (baseCommand) {
       case '/help':
-        console.log('\x1B[3A');
-        console.log();
+        console.log('\x1B[2A');
         printHelp();
-        console.log();
         break;
       case '/channel':
         console.log('\x1B[2A');
@@ -225,6 +239,7 @@ export class InputTaker extends EventEmitter {
         break;
       case '/connect':
         console.log('\x1B[2A');
+
         if (!this.connector) {
           if (commandArgs.length === 0) {
             console.log('Enter the address:port of the vex server.');

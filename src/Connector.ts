@@ -27,6 +27,7 @@ const maxUsernameLength = 15;
 export class Connector extends EventEmitter {
   public handshakeStatus: boolean;
   public connectedChannelId: string | null;
+  public authed: boolean;
   private ws: WebSocket | null;
   private host: string;
   private port: number;
@@ -37,6 +38,7 @@ export class Connector extends EventEmitter {
   private historyRetrieved: boolean;
   private setInRoom: (status: boolean) => void;
   private serverAlive: boolean;
+  private serverMessageDisplayed: boolean;
 
   constructor(
     host: string,
@@ -55,6 +57,8 @@ export class Connector extends EventEmitter {
     this.user = null;
     this.historyRetrieved = false;
     this.serverAlive = true;
+    this.serverMessageDisplayed = false;
+    this.authed = false;
     this.init();
     this.setInRoom = setInRoom;
   }
@@ -135,12 +139,11 @@ export class Connector extends EventEmitter {
       jsonMessage.user_id === serverMessageUserID
     ) {
       console.log(
-        chalk.blackBright(timestamp) +
-          chalk.italic.blackBright(jsonMessage.message)
+        chalk.gray(timestamp) + chalk.italic.gray(jsonMessage.message)
       );
     } else {
       console.log(
-        chalk.blackBright(timestamp) +
+        chalk.gray(timestamp) +
           `${chalk.bold(
             normalizeStringLength(jsonMessage.username + ':', maxUsernameLength)
           )}${
@@ -217,8 +220,6 @@ export class Connector extends EventEmitter {
   }
 
   private async getHistory() {
-    console.log('                                    ');
-
     const historyQuery = await db
       .sql('chat_messages')
       .select('message_id', 'created_at')
@@ -239,6 +240,12 @@ export class Connector extends EventEmitter {
         .orderBy('created_at', 'desc')
         .whereRaw('created_at <= ?', historyQuery[0].created_at)
         .limit(15);
+
+      let t = 1;
+      while (!this.authed) {
+        await sleep(t);
+        t *= 2;
+      }
 
       for (const msg of storedHistory.reverse()) {
         this.printMessage(msg);
@@ -295,7 +302,7 @@ export class Connector extends EventEmitter {
     const ws = new WebSocket(`wss://${this.host}/socket`);
 
     ws.on('open', async () => {
-      console.log(chalk.green.bold('Connected!'));
+      // console.log(chalk.green.bold('Connected!'));
       this.handshake(ws);
 
       setTimeout(() => {
@@ -311,8 +318,6 @@ export class Connector extends EventEmitter {
       }
 
       this.startPing();
-
-      this.emit('success');
     });
 
     ws.on('close', () => {
@@ -342,13 +347,13 @@ export class Connector extends EventEmitter {
       switch (jsonMessage.type) {
         case 'authResult':
           if (jsonMessage.status === 'SUCCESS') {
+            this.emit('success');
+            this.authed = true;
             this.setInRoom(true);
           }
           break;
         case 'welcomeMessage':
-          console.log();
-          console.log(jsonMessage.message);
-          console.log();
+          console.log(chalk.bold(jsonMessage.message) + '\n');
           break;
         case 'chat':
           this.printMessage(jsonMessage);

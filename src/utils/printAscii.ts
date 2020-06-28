@@ -19,7 +19,5 @@ export function printAscii() {
     )
   );
   console.log('Vex CLI client version v0.0.1');
-  console.log();
   printHelp();
-  console.log();
 }
