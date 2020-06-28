@@ -1,5 +1,7 @@
 # vex-chat cli client
 
+[![npm version](https://badge.fury.io/js/vex-chat.svg)](https://badge.fury.io/js/vex-chat)
+
 This is a reference frontend in typescript for the Vex chat backend.
 
 ## installing
