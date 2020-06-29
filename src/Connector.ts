@@ -288,7 +288,7 @@ export class Connector extends EventEmitter {
       } else {
         failedCount = 0;
       }
-      if (failedCount >= 1) {
+      if (failedCount > 1) {
         this.emit('unresponsive', this.connectedChannelId);
         this.close();
         return;
