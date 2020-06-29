@@ -11,13 +11,13 @@ const helpItems: IHelpItem[] = [
     command: '/channel ls',
     description: 'Lists the channels on the server..',
   },
-  {
-    command: '/channel new <channel_name> --arg',
-    description:
-      'Creates a new channel. Use ' +
-      chalk.bold('--private') +
-      ' for a private channel.',
-  },
+  // {
+  //   command: '/channel new <channel_name> --arg',
+  //   description:
+  //     'Creates a new channel. Use ' +
+  //     chalk.bold('--private') +
+  //     ' for a private channel.',
+  // },
   {
     command: '/close',
     description: 'Closes the connection to a currently connected server.',
