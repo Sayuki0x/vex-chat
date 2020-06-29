@@ -2,12 +2,15 @@
 import { Database } from './Database';
 import { InputTaker } from './InputTaker';
 import { KeyRing } from './Keyring';
+import { loadArgs } from './utils/loadArgs';
 import { loadEnv } from './utils/loadEnv';
 import { printAscii } from './utils/printAscii';
 
 // load the environment variables
 loadEnv();
 printAscii();
+
+export let { http } = loadArgs();
 
 export const { SQLITE_FILENAME } = process.env;
 

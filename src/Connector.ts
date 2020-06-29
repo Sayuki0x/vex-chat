@@ -3,7 +3,7 @@ import { EventEmitter } from 'events';
 import { decodeUTF8 } from 'tweetnacl-util';
 import { v4 as uuidv4 } from 'uuid';
 import WebSocket from 'ws';
-import { db, keyring } from './cli';
+import { db, http, keyring } from './cli';
 import { serverMessageUserID } from './constants/serverID';
 import { normalizeStrLen } from './utils/normalizeStrLen';
 import { sleep } from './utils/sleep';
@@ -142,6 +142,17 @@ export class Connector extends EventEmitter {
     }
   }
 
+  public getChannelList() {
+    const listChannelMsgId = uuidv4();
+    const msg = {
+      messageID: listChannelMsgId,
+      method: 'RETRIEVE',
+      type: 'channel',
+    };
+
+    this.getWs()?.send(JSON.stringify(msg));
+  }
+
   private async handshake(ws: WebSocket) {
     const userQuery = await db
       .sql('accounts')
@@ -275,8 +286,8 @@ export class Connector extends EventEmitter {
       } else {
         failedCount = 0;
       }
-      if (failedCount > 5) {
-        console.log('Server not responding, maybe down?');
+      if (failedCount >= 1) {
+        this.emit('unresponsive', this.connectedChannelId);
         this.close();
         return;
       }
@@ -290,8 +301,9 @@ export class Connector extends EventEmitter {
   }
 
   private init() {
-    // const ws = new WebSocket(`ws://${this.host}:${this.port}/socket`);
-    const ws = new WebSocket(`wss://${this.host}/socket`);
+    const ws = http
+      ? new WebSocket(`ws://${this.host}:${this.port}/socket`)
+      : new WebSocket(`wss://${this.host}/socket`);
 
     ws.on('open', async () => {
       // console.log(chalk.green.bold('Connected!'));
@@ -334,8 +346,16 @@ export class Connector extends EventEmitter {
       } catch (err) {
         console.warn(err);
       }
-
       switch (jsonMessage.type) {
+        case 'channelLeaveMsgRes':
+          console.log(
+            chalk.bold('Left channel ' + jsonMessage.channelID + '\n')
+          );
+          if (this.connectedChannelId === jsonMessage.channelID) {
+            this.connectedChannelId = null;
+          }
+
+          break;
         case 'authResult':
           if (jsonMessage.status === 'SUCCESS') {
             this.emit('success');
@@ -371,10 +391,10 @@ export class Connector extends EventEmitter {
               console.error(err);
             }
           }
-
+          break;
         case 'channelListResponse':
           this.channelList = jsonMessage.channels;
-          if (jsonMessage.channels && jsonMessage.channels.length > 0) {
+          if (jsonMessage.channels.length > 0) {
             console.log(chalk.bold('CHANNEL LIST'));
             for (const channel of jsonMessage.channels) {
               console.log(

@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { EventEmitter } from 'events';
 import moment from 'moment';
-import ora from 'ora';
+import ora, { Ora } from 'ora';
 import readline, { createInterface } from 'readline';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from './cli';
@@ -16,6 +16,7 @@ export class InputTaker extends EventEmitter {
   private rl: readline.Interface;
   private connector: Connector | null;
   private currentInput: string;
+  private spinner: ora.Ora | null;
 
   constructor() {
     super();
@@ -28,6 +29,7 @@ export class InputTaker extends EventEmitter {
     this.currentInput = '';
     this.shutdown = this.shutdown.bind(this);
     this.handleConnect = this.handleConnect.bind(this);
+    this.spinner = null;
     this.init();
   }
 
@@ -47,10 +49,9 @@ export class InputTaker extends EventEmitter {
 
     console.log(
       chalk.dim(
-        `Please enter a command. (Use ${chalk.bold('/help')} to see the menu)`
+        `Please enter a command. (Use ${chalk.bold('/help')} to see the menu)\n`
       )
     );
-    console.log();
 
     process.stdin.on('keypress', (str: string, key) => {
       if (key.sequence !== '\r') {
@@ -73,7 +74,16 @@ export class InputTaker extends EventEmitter {
     } else {
       console.log(
         chalk.dim(timestamp) +
-          `${chalk.bold(normalizeStrLen(jsonMessage.username, 15))}${
+          `${chalk.bold(
+            normalizeStrLen(
+              jsonMessage.username +
+                chalk.dim(
+                  '#' +
+                    (jsonMessage.user_id || jsonMessage.userID).split('-')[1]
+                ),
+              30
+            )
+          )}${
             jsonMessage.message.charAt(0) === '>'
               ? chalk.green(jsonMessage.message)
               : jsonMessage.message
@@ -90,12 +100,24 @@ export class InputTaker extends EventEmitter {
     process.exit(0);
   }
 
-  private handleConnect(url: string) {
-    const spinner = ora({
-      color: 'magenta',
-      discardStdin: false,
-      text: `Attempting login to vex server at ${chalk.bold(url)}\n`,
-    }).start();
+  private handleConnect(url: string, reconnect: boolean = false) {
+    if (!this.spinner) {
+      if (!reconnect) {
+        this.spinner = ora({
+          color: 'green',
+          discardStdin: false,
+          text: `Attempting login to vex server at ${chalk.bold(url)}\n`,
+        }).start();
+      } else {
+        this.spinner = ora({
+          color: 'yellow',
+          discardStdin: false,
+          text: `Server not responding, attempting reconnect ${chalk.bold(
+            url
+          )}\n`,
+        }).start();
+      }
+    }
     const components = url.split(':');
     let port = 8000;
     let host = 'localhost';
@@ -112,31 +134,52 @@ export class InputTaker extends EventEmitter {
       port = Number(components[1]);
     }
 
-    let spinnerResolved = false;
-
     const connector: Connector | null = new Connector(host, port);
     connector.on('failure', (err) => {
+      if (reconnect) {
+        this.connector?.close();
+        this.connector?.emit('unresponsive');
+        this.connector = null;
+        return;
+      }
       if (err) {
-        console.log('An error occurred:', chalk.red.bold(`${err.code}`));
+        if (this.spinner) {
+          this.spinner.fail(
+            'An error occurred: ' + chalk.red.bold(`${err.code}\n`)
+          );
+          this.spinner = null;
+        } else {
+          console.log('An error occurred: ' + chalk.red.bold(`${err.code}\n`));
+        }
       }
       this.connector?.close();
       this.connector = null;
     });
     connector.on('success', () => {
-      if (!spinnerResolved) {
-        spinner.succeed(
+      if (this.spinner) {
+        this.spinner.succeed(
           `Login succeeded to vex server at ${chalk.bold(host)} 🎉\n`
         );
-        spinnerResolved = true;
+        this.spinner = null;
       }
     });
     connector.on('close', () => {
-      if (!spinnerResolved) {
-        spinner.fail(`Login failed to vex server at ${chalk.bold(host)}\n`);
-        spinnerResolved = true;
+      if (reconnect) {
+        return;
+      }
+      if (this.spinner) {
+        this.spinner.fail(
+          `Login failed to vex server at ${chalk.bold(host)}\n`
+        );
+        this.spinner = null;
       }
       this.connector = null;
     });
+    connector.on('unresponsive', async () => {
+      await sleep(5000);
+      this.handleConnect(url, true);
+    });
+
     connector.on('msg', (msg: any, isServerMsg: boolean) => {
       readline.clearLine(process.stdin, -1);
       readline.cursorTo(process.stdin, 0);
@@ -155,21 +198,50 @@ export class InputTaker extends EventEmitter {
     }
 
     const baseCommand = commandArgs.shift();
-    console.log('\x1B[2A');
+    process.stdout.write('\x1B[1A');
+    readline.cursorTo(process.stdin, 0);
+    readline.clearLine(process.stdin, 1);
     switch (baseCommand) {
+      case '/leave':
+        if (!this.connector?.connectedChannelId) {
+          console.log(`You're not currently in a channel.`);
+        } else {
+          const leaveMsg = {
+            channelID: this.connector?.connectedChannelId,
+            messageID: uuidv4(),
+            method: 'LEAVE',
+            type: 'channel',
+          };
+          this.connector.getWs()?.send(JSON.stringify(leaveMsg));
+        }
+        break;
       case '/join':
         if (!this.connector || !this.connector.handshakeStatus) {
           console.log(
-            `Your'e not logged in to a server! Connect first with /connect`
-          );
-        }
-        if (commandArgs.length === 0) {
-          console.log(
-            'A channel number is required, e.g. ' + chalk.bold('/join 1')
+            `You're not logged in to a server! Connect first with /connect\n`
           );
           break;
         }
+        if (commandArgs.length === 0) {
+          console.log(
+            'A channel number is required, e.g. ' + chalk.bold('/join 1') + '\n'
+          );
+          break;
+        }
+
+        if (this.connector?.connectedChannelId) {
+          const leaveMsg = {
+            channelID: this.connector?.connectedChannelId,
+            messageID: uuidv4(),
+            method: 'LEAVE',
+            type: 'channel',
+          };
+          this.connector.getWs()?.send(JSON.stringify(leaveMsg));
+        }
+
         const id = commandArgs.shift();
+
+        let foundChannel = false;
         for (const channel of this.connector!.channelList) {
           if (channel.ID === Number(id)) {
             const joinChannelMsgId = uuidv4();
@@ -180,14 +252,19 @@ export class InputTaker extends EventEmitter {
               type: 'channel',
             };
             this.connector?.getWs()?.send(JSON.stringify(msg));
+            foundChannel = true;
             break;
           }
+        }
+        if (!foundChannel) {
+          console.log('No channel found ' + id + '\n');
         }
         break;
       case '/close':
         if (this.connector) {
           this.connector.close();
           console.log(`Server connection closed.\n`);
+          this.connector = null;
         } else {
           console.log(`You aren't connected to a server.\n`);
         }
@@ -198,7 +275,7 @@ export class InputTaker extends EventEmitter {
       case '/channel':
         if (!this.connector || !this.connector.handshakeStatus) {
           console.log(
-            'You need to login first! Use /connect hostname. See /help for details.'
+            'You need to login first! Use /connect hostname. See /help for details.\n'
           );
           break;
         }
@@ -206,13 +283,13 @@ export class InputTaker extends EventEmitter {
         const arg = commandArgs.shift();
         if (!arg) {
           console.log(
-            '/channel command requires an argument [new, ls]. See /help for details.'
+            '/channel command requires an argument [new, ls]. See /help for details.\n'
           );
         }
         if (arg === 'new') {
           if (commandArgs.length === 0) {
             console.log(
-              '/channel new requires a name argument, eg. /channel new General. See /help for details.'
+              '/channel new requires a name argument, eg. /channel new General. See /help for details.\n'
             );
           } else {
             const newChannelMsgId = uuidv4();
@@ -232,14 +309,7 @@ export class InputTaker extends EventEmitter {
           break;
         }
         if (arg === 'ls') {
-          const listChannelMsgId = uuidv4();
-          const msg = {
-            messageID: listChannelMsgId,
-            method: 'RETRIEVE',
-            type: 'channel',
-          };
-
-          this.connector?.getWs()?.send(JSON.stringify(msg));
+          this.connector.getChannelList();
           break;
         }
         break;
