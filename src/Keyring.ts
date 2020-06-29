@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import fs from 'fs';
 import os from 'os';
 import { sign, SignKeyPair } from 'tweetnacl';
@@ -80,5 +81,10 @@ export class KeyRing {
 
     const signKeyPair = sign.keyPair.fromSecretKey(priv);
     this.signKeyPair = signKeyPair;
+
+    console.log(
+      'Keyring initialized with public key ' +
+        chalk.bold(toHexString(this.getPub()) + '\n')
+    );
   }
 }
