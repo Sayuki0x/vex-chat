@@ -250,7 +250,11 @@ export class InputTaker extends EventEmitter {
 
         let foundChannel = false;
         for (const channel of this.connector!.channelList) {
-          if (channel.ID === Number(id)) {
+          if (
+            channel.ID === Number(id) ||
+            channel.name === id ||
+            channel.channelID === id
+          ) {
             const joinChannelMsgId = uuidv4();
             const msg = {
               channelID: channel.channelID,
@@ -299,11 +303,14 @@ export class InputTaker extends EventEmitter {
               '/channel new requires a name argument, eg. /channel new General. See /help for details.\n'
             );
           } else {
+            const privateChannel = commandArgs.includes('--private');
+
             const newChannelMsgId = uuidv4();
             const message = {
               messageID: newChannelMsgId,
               method: 'CREATE',
               name: commandArgs.shift(),
+              privateChannel,
               type: 'channel',
             };
 

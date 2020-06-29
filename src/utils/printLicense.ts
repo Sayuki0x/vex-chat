@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { version } from 'os';
+import { version } from '../constants/version';
 
 export function printLicense() {
   console.log(`vex-chat version ${chalk.bold(version)}\n`);

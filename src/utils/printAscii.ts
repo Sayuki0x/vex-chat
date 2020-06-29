@@ -1,6 +1,4 @@
 import chalk from 'chalk';
-import { version } from '../constants/version';
-import { printHelp } from './printHelp';
 
 export function printAscii() {
   console.log(
