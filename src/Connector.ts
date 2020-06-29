@@ -213,8 +213,6 @@ export class Connector extends EventEmitter {
     });
 
     ws.send(JSON.stringify(challengeMessage));
-
-    // await this.getHistory();
   }
 
   private async getHistory(channelID: string) {
@@ -232,13 +230,17 @@ export class Connector extends EventEmitter {
     if (historyQuery.length === 1) {
       topMessage = historyQuery[0].message_id;
 
-      const storedHistory = await db
-        .sql('chat_messages')
-        .select()
-        .whereRaw('created_at <= ?', historyQuery[0].created_at)
-        .andWhere({ channel_id: channelID })
-        .orderBy('created_at', 'desc')
-        .limit(100);
+      const storedHistory = this.autoConnectChannel
+        ? []
+        : await db
+            .sql('chat_messages')
+            .select()
+            .whereRaw('created_at <= ?', historyQuery[0].created_at)
+            .andWhere({ channel_id: channelID })
+            .orderBy('created_at', 'desc')
+            .limit(100);
+
+      this.autoConnectChannel = null;
 
       let t = 1;
       while (!this.authed) {
@@ -265,7 +267,7 @@ export class Connector extends EventEmitter {
       type: 'historyReq',
     };
 
-    this.subscribe(msgId, (msg: any) => {
+    this.subscribe(msgId, () => {
       this.historyRetrieved = true;
     });
 
@@ -449,14 +451,10 @@ export class Connector extends EventEmitter {
         case 'channelJoinRes':
           if (jsonMessage.status === 'SUCCESS') {
             this.connectedChannelId = jsonMessage.channelID;
-            if (this.autoConnectChannel) {
-              this.autoConnectChannel = null;
-              break;
-            }
-            console.log(chalk.bold(jsonMessage.name.toUpperCase()));
             if (!this.autoConnectChannel) {
-              await this.getHistory(jsonMessage.channelID);
+              console.log(chalk.bold(jsonMessage.name.toUpperCase()));
             }
+            await this.getHistory(jsonMessage.channelID);
           }
           break;
         case 'error':
