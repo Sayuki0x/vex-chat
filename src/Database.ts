@@ -3,13 +3,14 @@
 import chalk from 'chalk';
 import { EventEmitter } from 'events';
 import knex from 'knex';
+import { progFolder } from './Keyring';
 
 export class Database extends EventEmitter {
   public ready: boolean;
   public sql: knex<any, unknown> = knex({
     client: 'sqlite3',
     connection: {
-      filename: 'vex.db',
+      filename: `${progFolder}/vex.db`,
     },
     useNullAsDefault: true,
   });

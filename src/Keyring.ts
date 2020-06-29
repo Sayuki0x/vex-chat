@@ -1,22 +1,27 @@
 import fs from 'fs';
-import { box, BoxKeyPair, sign, SignKeyPair } from 'tweetnacl';
+import os from 'os';
+import { sign, SignKeyPair } from 'tweetnacl';
 import { fromHexString, toHexString } from './utils/typeHelpers';
 
-const keyFolder = {
-  encryptPrivKey: 'encryption_key.priv',
-  encryptPubKey: 'encryption_key.pub',
-  name: 'keys',
-  signPrivKey: 'signing_key.priv',
-  signPubKey: 'signing_key.pub',
+const configFolder = {
+  folderName: '.vex-chat',
+  keyFolderName: 'keys',
+  privKey: 'key.priv',
+  pubKey: 'key.pub',
 };
+
+export const progFolder = `${os.homedir()}/${configFolder.folderName}`;
+const keyFolder = `${os.homedir()}/${configFolder.folderName}/${
+  configFolder.keyFolderName
+}`;
+const pubKeyFile = `${keyFolder}/${configFolder.pubKey}`;
+const privKeyFile = `${keyFolder}/${configFolder.privKey}`;
 
 export class KeyRing {
   private signKeyPair: SignKeyPair | null;
-  private encryptKeyPair: BoxKeyPair | null;
 
   constructor() {
     this.signKeyPair = null;
-    this.encryptKeyPair = null;
     this.init();
   }
 
@@ -32,10 +37,6 @@ export class KeyRing {
     return sign.detached.verify(message, signature, publicKey);
   }
 
-  public getEncryptionPub() {
-    return this.encryptKeyPair!.publicKey;
-  }
-
   public getPub() {
     return this.signKeyPair!.publicKey;
   }
@@ -45,55 +46,28 @@ export class KeyRing {
   }
 
   private init() {
-    if (
-      !fs.existsSync(keyFolder.name) ||
-      (!fs.existsSync(`./${keyFolder.name}/${keyFolder.signPubKey}`) &&
-        !fs.existsSync(`./${keyFolder.name}/${keyFolder.signPrivKey}`))
-    ) {
-      fs.mkdirSync(keyFolder.name);
-
-      const signingKeys = sign.keyPair();
-
-      fs.writeFileSync(
-        `./${keyFolder.name}/${keyFolder.signPubKey}`,
-        toHexString(signingKeys.publicKey),
-        {
-          encoding: 'utf8',
-        }
-      );
-      fs.writeFileSync(
-        `./${keyFolder.name}/${keyFolder.signPrivKey}`,
-        toHexString(signingKeys.secretKey),
-        {
-          encoding: 'utf8',
-        }
-      );
+    if (!fs.existsSync(progFolder)) {
+      fs.mkdirSync(progFolder);
     }
 
-    if (
-      !fs.existsSync(`./${keyFolder.name}/${keyFolder.encryptPubKey}`) &&
-      !fs.existsSync(`./${keyFolder.name}/${keyFolder.encryptPrivKey}`)
-    ) {
-      const encryptionKeys = box.keyPair();
+    if (!fs.existsSync(keyFolder)) {
+      fs.mkdirSync(keyFolder);
+    }
 
-      fs.writeFileSync(
-        `./${keyFolder.name}/${keyFolder.encryptPubKey}`,
-        toHexString(encryptionKeys.publicKey),
-        {
-          encoding: 'utf8',
-        }
-      );
-      fs.writeFileSync(
-        `./${keyFolder.name}/${keyFolder.encryptPrivKey}`,
-        toHexString(encryptionKeys.secretKey),
-        {
-          encoding: 'utf8',
-        }
-      );
+    // if the private key doesn't exist
+    if (!fs.existsSync(privKeyFile)) {
+      // generate and write keys to disk
+      const signingKeys = sign.keyPair();
+      fs.writeFileSync(pubKeyFile, toHexString(signingKeys.publicKey), {
+        encoding: 'utf8',
+      });
+      fs.writeFileSync(privKeyFile, toHexString(signingKeys.secretKey), {
+        encoding: 'utf8',
+      });
     }
 
     const priv = fromHexString(
-      fs.readFileSync(`./${keyFolder.name}/${keyFolder.signPrivKey}`, {
+      fs.readFileSync(privKeyFile, {
         encoding: 'utf8',
       })
     );
@@ -106,14 +80,5 @@ export class KeyRing {
 
     const signKeyPair = sign.keyPair.fromSecretKey(priv);
     this.signKeyPair = signKeyPair;
-
-    const encryptPriv = fromHexString(
-      fs.readFileSync(`./${keyFolder.name}/${keyFolder.encryptPrivKey}`, {
-        encoding: 'utf8',
-      })
-    );
-
-    const encryptKeyPair = box.keyPair.fromSecretKey(encryptPriv);
-    this.encryptKeyPair = encryptKeyPair;
   }
 }
