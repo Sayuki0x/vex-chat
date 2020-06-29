@@ -100,7 +100,11 @@ export class InputTaker extends EventEmitter {
     process.exit(0);
   }
 
-  private handleConnect(url: string, reconnect: boolean = false) {
+  private handleConnect(
+    url: string,
+    reconnect: boolean = false,
+    channelConnectID?: string
+  ) {
     if (!this.spinner) {
       if (!reconnect) {
         this.spinner = ora({
@@ -134,11 +138,16 @@ export class InputTaker extends EventEmitter {
       port = Number(components[1]);
     }
 
-    const connector: Connector | null = new Connector(host, port);
+    const connector: Connector | null = new Connector(
+      host,
+      port,
+      reconnect,
+      channelConnectID || undefined
+    );
     connector.on('failure', (err) => {
       if (reconnect) {
         this.connector?.close();
-        this.connector?.emit('unresponsive');
+        this.connector?.emit('unresponsive', channelConnectID);
         this.connector = null;
         return;
       }
@@ -158,7 +167,9 @@ export class InputTaker extends EventEmitter {
     connector.on('success', () => {
       if (this.spinner) {
         this.spinner.succeed(
-          `Login succeeded to vex server at ${chalk.bold(host)} 🎉\n`
+          reconnect
+            ? `Reconnect succeeded to vex server at ${chalk.bold(host)} 🎉`
+            : `Login succeeded to vex server at ${chalk.bold(host)} 🎉\n`
         );
         this.spinner = null;
       }
@@ -175,9 +186,9 @@ export class InputTaker extends EventEmitter {
       }
       this.connector = null;
     });
-    connector.on('unresponsive', async () => {
+    connector.on('unresponsive', async (cID: string) => {
       await sleep(5000);
-      this.handleConnect(url, true);
+      this.handleConnect(url, true, cID);
     });
 
     connector.on('msg', (msg: any, isServerMsg: boolean) => {

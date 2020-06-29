@@ -32,8 +32,6 @@ interface IChannel {
   name: string;
 }
 
-const maxUsernameLength = 15;
-
 export class Connector extends EventEmitter {
   public handshakeStatus: boolean;
   public connectedChannelId: string | null;
@@ -42,29 +40,32 @@ export class Connector extends EventEmitter {
   private ws: WebSocket | null;
   private host: string;
   private port: number;
-  private serverPubKey: string | null;
   private subscriptions: ISubscription[];
   private registered: boolean;
-  private user: IUser | null;
   private historyRetrieved: boolean;
   private serverAlive: boolean;
-  private serverMessageDisplayed: boolean;
   private pingInterval: NodeJS.Timeout | null;
+  private autoConnectChannel: string | null;
+  private silent: boolean;
 
-  constructor(host: string, port: number) {
+  constructor(
+    host: string,
+    port: number,
+    reconnect: boolean = false,
+    autoConnectChannel?: string
+  ) {
     super();
     this.ws = null;
     this.handshakeStatus = false;
     this.registered = false;
     this.host = host;
     this.port = port;
-    this.serverPubKey = null;
+    this.silent = reconnect;
     this.connectedChannelId = null;
     this.subscriptions = [];
-    this.user = null;
+    this.autoConnectChannel = autoConnectChannel || null;
     this.historyRetrieved = false;
     this.serverAlive = true;
-    this.serverMessageDisplayed = false;
     this.authed = false;
     this.channelList = [];
     this.pingInterval = null;
@@ -118,11 +119,11 @@ export class Connector extends EventEmitter {
             uuid,
           });
           this.registered = true;
-          this.user = {
-            hostname: this.getHost(),
-            username: 'Anonymous',
-            uuid,
-          };
+          // this.user = {
+          //   hostname: this.getHost(),
+          //   username: 'Anonymous',
+          //   uuid,
+          // };
         }
       });
 
@@ -160,8 +161,8 @@ export class Connector extends EventEmitter {
       .where({ hostname: this.host });
 
     if (userQuery.length > 0) {
-      const [user] = userQuery;
-      this.user = user;
+      // const [user] = userQuery;
+      // this.user = user;
     }
 
     const serverQuery = await db
@@ -196,7 +197,6 @@ export class Connector extends EventEmitter {
           fromHexString(pubkey || msg.pubkey)
         )
       ) {
-        this.serverPubKey = pubkey || msg.pubkey;
         if (newServer) {
           await db
             .sql('servers')
@@ -238,7 +238,7 @@ export class Connector extends EventEmitter {
         .whereRaw('created_at <= ?', historyQuery[0].created_at)
         .andWhere({ channel_id: channelID })
         .orderBy('created_at', 'desc')
-        .limit(15);
+        .limit(100);
 
       let t = 1;
       while (!this.authed) {
@@ -353,6 +353,7 @@ export class Connector extends EventEmitter {
           );
           if (this.connectedChannelId === jsonMessage.channelID) {
             this.connectedChannelId = null;
+            this.silent = false;
           }
 
           break;
@@ -363,6 +364,9 @@ export class Connector extends EventEmitter {
           }
           break;
         case 'welcomeMessage':
+          if (this.autoConnectChannel || this.silent) {
+            break;
+          }
           console.log(chalk.bold(jsonMessage.message) + '\n');
           break;
         case 'chat':
@@ -394,6 +398,24 @@ export class Connector extends EventEmitter {
           break;
         case 'channelListResponse':
           this.channelList = jsonMessage.channels;
+          if (this.autoConnectChannel) {
+            for (const channel of this.channelList) {
+              if (channel.channelID === this.autoConnectChannel) {
+                const joinChannelMsgId = uuidv4();
+                const joinMsg = {
+                  channelID: channel.channelID,
+                  messageID: joinChannelMsgId,
+                  method: 'JOIN',
+                  type: 'channel',
+                };
+                this.getWs()?.send(JSON.stringify(joinMsg));
+                break;
+              }
+            }
+          }
+          if (this.silent) {
+            break;
+          }
           if (jsonMessage.channels.length > 0) {
             console.log(chalk.bold('CHANNEL LIST'));
             for (const channel of jsonMessage.channels) {
@@ -427,9 +449,14 @@ export class Connector extends EventEmitter {
         case 'channelJoinRes':
           if (jsonMessage.status === 'SUCCESS') {
             this.connectedChannelId = jsonMessage.channelID;
+            if (this.autoConnectChannel) {
+              this.autoConnectChannel = null;
+              break;
+            }
             console.log(chalk.bold(jsonMessage.name.toUpperCase()));
-
-            await this.getHistory(jsonMessage.channelID);
+            if (!this.autoConnectChannel) {
+              await this.getHistory(jsonMessage.channelID);
+            }
           }
           break;
         case 'error':
