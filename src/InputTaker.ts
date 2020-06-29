@@ -151,6 +151,13 @@ export class InputTaker extends EventEmitter {
             'An error occurred: ' + chalk.red.bold(`${err.code}\n`)
           );
           this.spinner = null;
+          if (err.code === 'DEPTH_ZERO_SELF_SIGNED_CERT') {
+            console.log(
+              `It looks like you may be trying to connect to a server that doesn\'t use https. Use ${chalk.bold(
+                '--unsafe'
+              )} flag to start the program to do this, but you should only do it for development purposes.\n`
+            );
+          }
         } else {
           console.log('An error occurred: ' + chalk.red.bold(`${err.code}\n`));
         }
@@ -209,6 +216,77 @@ export class InputTaker extends EventEmitter {
     readline.cursorTo(process.stdin, 0);
     readline.clearLine(process.stdin, 1);
     switch (baseCommand) {
+      case '/invite':
+        if (!this.connector || !this.connector.handshakeStatus) {
+          console.log(
+            `You're not logged in to a server! Connect first with /connect\n`
+          );
+          break;
+        }
+        if (commandArgs.length < 2) {
+          console.log(
+            'A channel name and userID, e.g. ' +
+              chalk.bold(
+                '/invite channel_name c7ca736b-2dcb-46c4-9993-e7653a49da73'
+              ) +
+              '\n'
+          );
+          break;
+        }
+        const [channelName, userID] = commandArgs;
+
+        let channelFound = false;
+        for (const channel of this.connector!.channelList) {
+          if (channel.name === channelName) {
+            const inviteChannelMsgId = uuidv4();
+            const msg = {
+              messageID: inviteChannelMsgId,
+              method: 'CREATE',
+              permission: {
+                channelID: channel.channelID,
+                powerLevel: 0,
+                userID,
+              },
+              type: 'channelPerm',
+            };
+            this.connector?.getWs()?.send(JSON.stringify(msg));
+            channelFound = true;
+            break;
+          }
+        }
+        if (!channelFound) {
+          console.log('No channel found ' + channelName + '\n');
+        }
+        break;
+      case '/lookup':
+        if (!this.connector || !this.connector.handshakeStatus) {
+          console.log(
+            `You're not logged in to a server! Connect first with /connect\n`
+          );
+          break;
+        }
+        if (commandArgs.length === 0) {
+          console.log(
+            'A usertag is required, e.g. ' +
+              chalk.bold('/lookup Anonymous#2dcb') +
+              '\n'
+          );
+          break;
+        }
+        const reqParts = commandArgs.shift()?.split('#');
+
+        if (reqParts) {
+          const [username, userTag] = reqParts;
+          const userInfoMsg = {
+            messageID: uuidv4(),
+            method: 'RETRIEVE',
+            type: 'userInfo',
+            userTag,
+            username,
+          };
+          this.connector.getWs()?.send(JSON.stringify(userInfoMsg));
+        }
+        break;
       case '/leave':
         if (!this.connector?.connectedChannelId) {
           console.log(`You're not currently in a channel.`);
@@ -277,7 +355,9 @@ export class InputTaker extends EventEmitter {
           console.log(`Server connection closed.\n`);
           this.connector = null;
         } else {
-          console.log(`You aren't connected to a server.\n`);
+          console.log(
+            `You're not logged in to a server! Connect first with /connect\n`
+          );
         }
         break;
       case '/help':
@@ -286,7 +366,7 @@ export class InputTaker extends EventEmitter {
       case '/channel':
         if (!this.connector || !this.connector.handshakeStatus) {
           console.log(
-            'You need to login first! Use /connect hostname. See /help for details.\n'
+            `You're not logged in to a server! Connect first with /connect\n`
           );
           break;
         }
@@ -330,7 +410,7 @@ export class InputTaker extends EventEmitter {
       case '/nick':
         if (!this.connector || !this.connector.handshakeStatus) {
           console.log(
-            `Your'e not logged in to a server! Connect first with /connect\n`
+            `You're not logged in to a server! Connect first with /connect\n`
           );
         }
 

@@ -1,30 +1,29 @@
 import chalk from 'chalk';
 import fs from 'fs';
-import os from 'os';
 import { sign, SignKeyPair } from 'tweetnacl';
 import { printHelp } from './utils/printHelp';
 import { fromHexString, toHexString } from './utils/typeHelpers';
 
 const configFolder = {
-  folderName: '.vex-chat',
   keyFolderName: 'keys',
   privKey: 'key.priv',
   pubKey: 'key.pub',
 };
 
-export const progFolder = `${os.homedir()}/${configFolder.folderName}`;
-const keyFolder = `${os.homedir()}/${configFolder.folderName}/${
-  configFolder.keyFolderName
-}`;
-const pubKeyFile = `${keyFolder}/${configFolder.pubKey}`;
-const privKeyFile = `${keyFolder}/${configFolder.privKey}`;
-
 export class KeyRing {
   private signKeyPair: SignKeyPair | null;
+  private idFolder: string;
+  private keyFolder: string;
+  private pubKeyFile: string;
+  private privKeyFile: string;
 
-  constructor() {
+  constructor(idFolder: string) {
     this.init = this.init.bind(this);
 
+    this.idFolder = idFolder;
+    this.keyFolder = `${idFolder}/keys`;
+    this.pubKeyFile = `${this.keyFolder}/${configFolder.pubKey}`;
+    this.privKeyFile = `${this.keyFolder}/${configFolder.privKey}`;
     this.signKeyPair = null;
     this.init();
   }
@@ -50,28 +49,28 @@ export class KeyRing {
   }
 
   private init() {
-    if (!fs.existsSync(progFolder)) {
-      fs.mkdirSync(progFolder);
+    if (!fs.existsSync(this.idFolder)) {
+      fs.mkdirSync(this.idFolder);
     }
 
-    if (!fs.existsSync(keyFolder)) {
-      fs.mkdirSync(keyFolder);
+    if (!fs.existsSync(this.keyFolder)) {
+      fs.mkdirSync(this.keyFolder);
     }
 
     // if the private key doesn't exist
-    if (!fs.existsSync(privKeyFile)) {
+    if (!fs.existsSync(this.privKeyFile)) {
       // generate and write keys to disk
       const signingKeys = sign.keyPair();
-      fs.writeFileSync(pubKeyFile, toHexString(signingKeys.publicKey), {
+      fs.writeFileSync(this.pubKeyFile, toHexString(signingKeys.publicKey), {
         encoding: 'utf8',
       });
-      fs.writeFileSync(privKeyFile, toHexString(signingKeys.secretKey), {
+      fs.writeFileSync(this.privKeyFile, toHexString(signingKeys.secretKey), {
         encoding: 'utf8',
       });
     }
 
     const priv = fromHexString(
-      fs.readFileSync(privKeyFile, {
+      fs.readFileSync(this.privKeyFile, {
         encoding: 'utf8',
       })
     );

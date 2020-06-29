@@ -349,6 +349,34 @@ export class Connector extends EventEmitter {
         console.warn(err);
       }
       switch (jsonMessage.type) {
+        case 'channelPermRes':
+          if (jsonMessage.status === 'SUCCESS') {
+            console.log('User granted permissions to channel.');
+          }
+          break;
+        case 'userInfoRes':
+          if (jsonMessage.matchList.length === 0) {
+            console.log('No users were found that matched your search.');
+          } else {
+            console.log(
+              chalk.bold(jsonMessage.matchList.length.toString() + ' MATCHES')
+            );
+            for (const user of jsonMessage.matchList) {
+              console.log(
+                normalizeStrLen(chalk.bold('Username'), 25) + user.Username
+              );
+              console.log(
+                normalizeStrLen(chalk.bold('Pubkey'), 25) + user.PubKey
+              );
+              console.log(normalizeStrLen(chalk.bold('UUID'), 25) + user.UUID);
+              console.log(
+                normalizeStrLen(chalk.bold('Power Level'), 25) +
+                  user.PowerLevel.toString()
+              );
+            }
+            process.stdout.write('\n');
+          }
+          break;
         case 'channelLeaveMsgRes':
           console.log(
             chalk.bold('Left channel ' + jsonMessage.channelID + '\n')

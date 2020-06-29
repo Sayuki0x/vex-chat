@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { version } from '../constants/version';
 
-export function printLicense(condensed: boolean = true) {
+export function printLicense() {
   console.log(`vex-chat version ${chalk.bold(version)}`);
   console.log('Copyright 2019-2020 LogicBite LLC\n');
   console.log(
