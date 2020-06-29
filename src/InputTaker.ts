@@ -6,6 +6,7 @@ import readline, { createInterface } from 'readline';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from './cli';
 import { Connector } from './Connector';
+import { isValidUUID } from './constants/regex';
 import { normalizeStrLen } from './utils/normalizeStrLen';
 import { printHelp } from './utils/printHelp';
 import { sleep } from './utils/sleep';
@@ -167,11 +168,14 @@ export class InputTaker extends EventEmitter {
     });
     connector.on('success', () => {
       if (this.spinner) {
-        this.spinner.succeed(
-          reconnect
-            ? `Reconnect succeeded to vex server at ${chalk.bold(host)} 🎉`
-            : `Login succeeded to vex server at ${chalk.bold(host)} 🎉\n`
-        );
+        if (reconnect) {
+          this.spinner.stop();
+          reconnect = false;
+        } else {
+          this.spinner.succeed(
+            `Login succeeded to vex server at ${chalk.bold(host)} 🎉\n`
+          );
+        }
         this.spinner = null;
       }
     });
@@ -225,37 +229,87 @@ export class InputTaker extends EventEmitter {
         }
         if (commandArgs.length < 2) {
           console.log(
-            'A channel name and userID, e.g. ' +
-              chalk.bold(
-                '/invite channel_name c7ca736b-2dcb-46c4-9993-e7653a49da73'
-              ) +
+            'A channel name and user tag or userID, e.g. ' +
+              chalk.bold('/invite channel_name Anonymous#2dcb') +
               '\n'
           );
           break;
         }
-        const [channelName, userID] = commandArgs;
+        const [channelName, identifier] = commandArgs;
 
-        let channelFound = false;
-        for (const channel of this.connector!.channelList) {
-          if (channel.name === channelName) {
-            const inviteChannelMsgId = uuidv4();
-            const msg = {
-              messageID: inviteChannelMsgId,
-              method: 'CREATE',
-              permission: {
-                channelID: channel.channelID,
-                powerLevel: 0,
-                userID,
-              },
-              type: 'channelPerm',
-            };
-            this.connector?.getWs()?.send(JSON.stringify(msg));
-            channelFound = true;
-            break;
+        if (isValidUUID(identifier)) {
+          let channelFound = false;
+          for (const channel of this.connector!.channelList) {
+            if (channel.name === channelName) {
+              const inviteChannelMsgId = uuidv4();
+              const msg = {
+                messageID: inviteChannelMsgId,
+                method: 'CREATE',
+                permission: {
+                  channelID: channel.channelID,
+                  powerLevel: 0,
+                  userID: identifier,
+                },
+                type: 'channelPerm',
+              };
+              this.connector?.getWs()?.send(JSON.stringify(msg));
+              channelFound = true;
+              break;
+            }
           }
-        }
-        if (!channelFound) {
-          console.log('No channel found ' + channelName + '\n');
+          if (!channelFound) {
+            console.log('No channel found ' + channelName + '\n');
+          }
+          break;
+        } else {
+          const idParts = identifier.split('#');
+          if (idParts) {
+            const [username, userTag] = idParts;
+            const messageID = uuidv4();
+            const userInfoMsg = {
+              messageID,
+              method: 'RETRIEVE',
+              type: 'userInfo',
+              userTag,
+              username,
+            };
+
+            this.connector.subscribe(messageID, (jsonMessage: any) => {
+              if (jsonMessage.matchList.length > 1) {
+                console.log(
+                  'Multiple results reported. Please use the user\'s exact UUID instead.'
+                );
+                return;
+              }
+              const [usr] = jsonMessage.matchList;
+              const { UUID } = usr;
+
+              let channelFound = false;
+              for (const channel of this.connector!.channelList) {
+                if (channel.name === channelName) {
+                  const inviteChannelMsgId = uuidv4();
+                  const msg = {
+                    messageID: inviteChannelMsgId,
+                    method: 'CREATE',
+                    permission: {
+                      channelID: channel.channelID,
+                      powerLevel: 0,
+                      userID: UUID,
+                    },
+                    type: 'channelPerm',
+                  };
+                  this.connector?.getWs()?.send(JSON.stringify(msg));
+                  channelFound = true;
+                  break;
+                }
+              }
+              if (!channelFound) {
+                console.log('No channel found ' + channelName + '\n');
+              }
+            });
+
+            this.connector.getWs()?.send(JSON.stringify(userInfoMsg));
+          }
         }
         break;
       case '/lookup':
