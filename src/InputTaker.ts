@@ -136,7 +136,6 @@ export class InputTaker extends EventEmitter {
     const connector: Connector | null = new Connector(
       host,
       port,
-      reconnect,
       channelConnectID || undefined
     );
     connector.on('failure', (err) => {
@@ -277,7 +276,7 @@ export class InputTaker extends EventEmitter {
             this.connector.subscribe(messageID, (jsonMessage: any) => {
               if (jsonMessage.matchList.length > 1) {
                 console.log(
-                  'Multiple results reported. Please use the user\'s exact UUID instead.'
+                  `Multiple users match tag. Please use the user's exact UUID instead.`
                 );
                 return;
               }

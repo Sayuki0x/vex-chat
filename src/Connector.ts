@@ -46,21 +46,14 @@ export class Connector extends EventEmitter {
   private serverAlive: boolean;
   private pingInterval: NodeJS.Timeout | null;
   private autoConnectChannel: string | null;
-  private silent: boolean;
 
-  constructor(
-    host: string,
-    port: number,
-    reconnect: boolean = false,
-    autoConnectChannel?: string
-  ) {
+  constructor(host: string, port: number, autoConnectChannel?: string) {
     super();
     this.ws = null;
     this.handshakeStatus = false;
     this.registered = false;
     this.host = host;
     this.port = port;
-    this.silent = reconnect;
     this.connectedChannelId = null;
     this.subscriptions = [];
     this.autoConnectChannel = autoConnectChannel || null;
@@ -119,11 +112,6 @@ export class Connector extends EventEmitter {
             uuid,
           });
           this.registered = true;
-          // this.user = {
-          //   hostname: this.getHost(),
-          //   username: 'Anonymous',
-          //   uuid,
-          // };
         }
       });
 
@@ -230,15 +218,13 @@ export class Connector extends EventEmitter {
     if (historyQuery.length === 1) {
       topMessage = historyQuery[0].message_id;
 
-      const storedHistory = this.autoConnectChannel
-        ? []
-        : await db
-            .sql('chat_messages')
-            .select()
-            .whereRaw('created_at <= ?', historyQuery[0].created_at)
-            .andWhere({ channel_id: channelID })
-            .orderBy('created_at', 'desc')
-            .limit(100);
+      const storedHistory = await db
+        .sql('chat_messages')
+        .select()
+        .whereRaw('created_at <= ?', historyQuery[0].created_at)
+        .andWhere({ channel_id: channelID })
+        .orderBy('created_at', 'desc')
+        .limit(100);
 
       this.autoConnectChannel = null;
 
@@ -349,6 +335,9 @@ export class Connector extends EventEmitter {
         console.warn(err);
       }
       switch (jsonMessage.type) {
+        case 'serverMessage':
+          console.log(jsonMessage.message);
+          break;
         case 'channelPermRes':
           if (jsonMessage.status === 'SUCCESS') {
             console.log('User granted permissions to channel.');
@@ -383,7 +372,6 @@ export class Connector extends EventEmitter {
           );
           if (this.connectedChannelId === jsonMessage.channelID) {
             this.connectedChannelId = null;
-            this.silent = false;
           }
 
           break;
@@ -394,9 +382,6 @@ export class Connector extends EventEmitter {
           }
           break;
         case 'welcomeMessage':
-          if (this.autoConnectChannel || this.silent) {
-            break;
-          }
           console.log(chalk.bold(jsonMessage.message) + '\n');
           break;
         case 'chat':
@@ -442,9 +427,6 @@ export class Connector extends EventEmitter {
                 break;
               }
             }
-          }
-          if (this.silent) {
-            break;
           }
           if (jsonMessage.channels.length > 0) {
             console.log(chalk.bold('CHANNEL LIST'));
