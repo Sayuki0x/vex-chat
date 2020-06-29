@@ -9,7 +9,7 @@ interface IHelpItem {
 const helpItems: IHelpItem[] = [
   {
     command: '/channel ls',
-    description: 'Lists the channels on the server..',
+    description: 'List channels on the server.',
   },
   // {
   //   command: '/channel new <channel_name> --arg',
@@ -20,33 +20,32 @@ const helpItems: IHelpItem[] = [
   // },
   {
     command: '/close',
-    description: 'Closes the connection to a currently connected server.',
+    description: 'Close the server connection.',
   },
   {
     command: '/connect <hostname>',
-    description: 'Connects to a server.',
+    description: 'Connect to a server.',
   },
   {
     command: '/exit',
-    description: 'Exits the client.',
+    description: 'Exit the client.',
   },
   {
     command: '/help',
-    description: 'Shows this menu.',
+    description: 'Show this menu.',
   },
   {
     command: '/join <identifier>',
-    description:
-      'Joins the channel <identifier>. Accepts a channel number, a channelID, or a name. Use /channel ls to view the channel list.',
+    description: 'Join the channel <identifier>',
   },
   {
     command: '/nick <nickname>',
-    description: 'Changes your nickname on the server.',
+    description: 'Change your nickname',
   },
 ];
 
 export function printHelpItem(item: IHelpItem) {
-  console.log(normalizeStrLen(chalk.bold(item.command), 60), item.description);
+  console.log(normalizeStrLen(chalk.bold(item.command), 40), item.description);
 }
 
 export function printHelp() {
