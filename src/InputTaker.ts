@@ -195,7 +195,9 @@ export class InputTaker extends EventEmitter {
       readline.clearLine(process.stdin, -1);
       readline.cursorTo(process.stdin, 0);
       this.printMessage(msg, isServerMsg);
-      process.stdout.write(this.currentInput);
+      if (this.currentInput) {
+        process.stdout.write(this.currentInput);
+      }
     });
 
     this.connector = connector;
