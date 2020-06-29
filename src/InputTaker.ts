@@ -430,6 +430,23 @@ export class InputTaker extends EventEmitter {
             '/channel command requires an argument [new, ls]. See /help for details.\n'
           );
         }
+        if (arg === 'delete') {
+          if (commandArgs.length === 0) {
+            console.log(
+              '/channel delete requires a name argument, eg. /channel delete 3cd23d1a-c267-4b4b-ab2a-1649b3aec322. See /help for details.\n'
+            );
+            break;
+          }
+          const channelID = commandArgs.shift();
+          const msgID = uuidv4();
+          const message = {
+            channelID,
+            messageID: msgID,
+            method: 'DELETE',
+            type: 'channel',
+          };
+          this.connector?.getWs()?.send(JSON.stringify(message));
+        }
         if (arg === 'new') {
           if (commandArgs.length === 0) {
             console.log(

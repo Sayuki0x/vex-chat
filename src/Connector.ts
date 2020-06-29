@@ -336,7 +336,7 @@ export class Connector extends EventEmitter {
       }
       switch (jsonMessage.type) {
         case 'serverMessage':
-          console.log(jsonMessage.message);
+          console.log(jsonMessage.message + '\n');
           break;
         case 'channelPermRes':
           if (jsonMessage.status === 'SUCCESS') {
@@ -447,7 +447,7 @@ export class Connector extends EventEmitter {
             );
           } else {
             console.log(chalk.bold('CHANNEL LIST'));
-            console.log(chalk.dim('The channel list is empty!'));
+            console.log('The channel list is empty!');
             console.log(
               chalk.dim(
                 'Use /channel new <Name> to create a channel. e.g. ' +
