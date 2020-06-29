@@ -47,12 +47,6 @@ export class InputTaker extends EventEmitter {
       timeout *= 2;
     }
 
-    console.log(
-      chalk.dim(
-        `Please enter a command. (Use ${chalk.bold('/help')} to see the menu)\n`
-      )
-    );
-
     process.stdin.on('keypress', (str: string, key) => {
       if (key.sequence !== '\r') {
         this.currentInput += str;

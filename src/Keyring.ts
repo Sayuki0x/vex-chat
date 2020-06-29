@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import fs from 'fs';
 import os from 'os';
 import { sign, SignKeyPair } from 'tweetnacl';
+import { printHelp } from './utils/printHelp';
 import { fromHexString, toHexString } from './utils/typeHelpers';
 
 const configFolder = {
@@ -22,6 +23,8 @@ export class KeyRing {
   private signKeyPair: SignKeyPair | null;
 
   constructor() {
+    this.init = this.init.bind(this);
+
     this.signKeyPair = null;
     this.init();
   }
@@ -85,6 +88,12 @@ export class KeyRing {
     console.log(
       'Keyring initialized with public key ' +
         chalk.bold(toHexString(this.getPub()) + '\n')
+    );
+    printHelp();
+    console.log(
+      chalk.dim(
+        `Please enter a command. (Use ${chalk.bold('/help')} to see the menu)\n`
+      )
     );
   }
 }
