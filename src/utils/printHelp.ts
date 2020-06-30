@@ -14,7 +14,7 @@ const helpItems: IHelpItem[] = [
     powerLevel: 0,
   },
   {
-    command: "/channel new <channel_name> --arg",
+    command: "/channel new <channel_name>",
     description:
       "Creates a new channel. Use " +
       chalk.bold("--private") +
@@ -42,13 +42,28 @@ const helpItems: IHelpItem[] = [
     powerLevel: 0,
   },
   {
+    command: "/invite <UserTag> <channel_name>",
+    description: "Gives user permission to channel.",
+    powerLevel: 50,
+  },
+  {
     command: "/join <identifier>",
-    description: "Join the channel <identifier>",
+    description: "Join the channel <identifier>.",
     powerLevel: 0,
   },
   {
     command: "/leave",
-    description: "Leaves the channel <identifier>",
+    description: "Leaves the channel.",
+    powerLevel: 0,
+  },
+  {
+    command: "/license",
+    description: "Prints the license.",
+    powerLevel: 0,
+  },
+  {
+    command: "/upgrade",
+    description: "Upgrades vex-chat.",
     powerLevel: 0,
   },
   {
