@@ -95,11 +95,14 @@ export class InputTaker extends EventEmitter {
     if (serverMessage) {
       console.log(chalk.dim(timestamp) + chalk.dim(jsonMessage.message));
     } else {
+      const userColor =
+        "#" +
+        (jsonMessage.user_id || (jsonMessage.userID as string)).slice(0, 6);
       console.log(
         chalk.dim(timestamp) +
           `${chalk.bold(
             normalizeStrLen(
-              jsonMessage.username +
+              chalk.hex(userColor).bold(jsonMessage.username) +
                 chalk.dim(
                   "#" +
                     (jsonMessage.user_id || jsonMessage.userID).split("-")[1]
@@ -359,7 +362,7 @@ export class InputTaker extends EventEmitter {
         console.log(
           "Exit the program and use " +
             chalk.bold("npm i -g vex-chat") +
-            " to upgrade."
+            " to upgrade.\n"
         );
         // console.log(
         //   "Calling " +
