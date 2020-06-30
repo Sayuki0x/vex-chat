@@ -646,11 +646,17 @@ function getEmoji(str: string) {
     case ':scream:':
       return '😱';
     case ':ghost:':
+      return '👻';
+    case ':sweat_drops:':
+      return '💦';
+    case ':poop:':
       return '💩';
     case ':kiss:':
       return '😘';
     case ':monocle:':
       return '🧐';
+    case ':wave:':
+      return '👋';
     case ':sunglasses:':
       return '😎';
     case ':neutral:':
