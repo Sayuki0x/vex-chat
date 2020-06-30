@@ -107,7 +107,7 @@ export class InputTaker extends EventEmitter {
                   "#" +
                     (jsonMessage.user_id || jsonMessage.userID).split("-")[1]
                 ),
-              30
+              57
             )
           )}${
             jsonMessage.message.charAt(0) === ">"
