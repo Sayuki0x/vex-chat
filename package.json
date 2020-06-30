@@ -1,6 +1,6 @@
 {
   "name": "vex-chat",
-  "version": "0.3.17",
+  "version": "0.3.18",
   "description": "A CLI client for the Vex chat backend.",
   "main": "./dist/index.js",
   "author": "Extra <extrahash@protonmail.com>",
