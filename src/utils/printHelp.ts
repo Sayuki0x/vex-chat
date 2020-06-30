@@ -42,13 +42,14 @@ const helpItems: IHelpItem[] = [
     powerLevel: 0,
   },
   {
-    command: "/invite <UserTag> <channel_name>",
+    command: "/invite <user> <channel>",
     description: "Gives user permission to channel.",
     powerLevel: 50,
   },
   {
-    command: "/join <identifier>",
-    description: "Join the channel <identifier>.",
+    command: "/join <#>",
+    description:
+      "Join the channel <#>. You can also use number/name/channelID.",
     powerLevel: 0,
   },
   {

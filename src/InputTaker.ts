@@ -273,7 +273,7 @@ export class InputTaker extends EventEmitter {
         if (commandArgs.length < 2) {
           console.log(
             "A channel name and user tag or userID, e.g. " +
-              chalk.bold("/invite channel_name Anonymous#2dcb") +
+              chalk.bold("/invite channel Anonymous#2dcb") +
               "\n"
           );
           break;
@@ -484,7 +484,7 @@ export class InputTaker extends EventEmitter {
         }
         break;
       case "/help":
-        printHelp();
+        printHelp(this.connector?.user?.PowerLevel || undefined);
         break;
       case "/channel":
         if (!this.connector || !this.connector.handshakeStatus) {
