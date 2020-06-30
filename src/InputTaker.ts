@@ -107,9 +107,11 @@ export class InputTaker extends EventEmitter {
               .bold(
                 normalizeStrLen(
                   jsonMessage.username +
-                    "#" +
                     chalk.dim(
-                      (jsonMessage.user_id || jsonMessage.userID).split("-")[1]
+                      "#" +
+                        (jsonMessage.user_id || jsonMessage.userID).split(
+                          "-"
+                        )[1]
                     ),
                   30
                 )
