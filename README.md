@@ -16,3 +16,7 @@ npm i -g vex-chat
 
 After installation completes, you can run with the command `vex-chat`
 I host an example server at `vex.extrahash.org` that is open for public registration.
+
+## attributions
+
+Some of the sounds in this project were created by David McKee (ViRiX) soundcloud.com/virix

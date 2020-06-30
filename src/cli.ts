@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import chalk from 'chalk';
 import { Database } from './Database';
 import { InputTaker } from './InputTaker';
 import { KeyRing } from './Keyring';

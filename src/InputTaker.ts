@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { exec } from 'child_process';
 import { EventEmitter } from 'events';
 import moment from 'moment';
 import ora, { Ora } from 'ora';
@@ -7,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { db } from './cli';
 import { Connector } from './Connector';
 import { isValidUUID } from './constants/regex';
+import { serverMessageUserID } from './constants/serverID';
 import { normalizeStrLen } from './utils/normalizeStrLen';
 import { printHelp } from './utils/printHelp';
 import { sleep } from './utils/sleep';
@@ -75,6 +77,19 @@ export class InputTaker extends EventEmitter {
   private printMessage(jsonMessage: any, serverMessage: boolean) {
     const createdAt = moment(jsonMessage.CreatedAt || jsonMessage.created_at);
     const timestamp = `${createdAt.format('HH:mm:ss')} › `;
+
+    let coloredMessage: string | null = null;
+
+    if (
+      jsonMessage.message.includes(this.connector?.user?.Username!) &&
+      jsonMessage.username !== 'Server Message'
+    ) {
+      coloredMessage = (jsonMessage.message as string).replace(
+        this.connector?.user?.Username!,
+        chalk.white.bgRedBright.bold(this.connector?.user?.Username!)
+      );
+    }
+
     if (serverMessage) {
       console.log(chalk.dim(timestamp) + chalk.dim(jsonMessage.message));
     } else {
@@ -92,7 +107,7 @@ export class InputTaker extends EventEmitter {
           )}${
             jsonMessage.message.charAt(0) === '>'
               ? chalk.green(jsonMessage.message)
-              : jsonMessage.message
+              : coloredMessage || jsonMessage.message
           }`
       );
     }
@@ -209,6 +224,20 @@ export class InputTaker extends EventEmitter {
     connector.on('msg', (msg: any, isServerMsg: boolean) => {
       readline.clearLine(process.stdin, -1);
       readline.cursorTo(process.stdin, 0);
+      if (
+        msg.message
+          .toUpperCase()
+          .includes(this.connector?.user?.Username.toUpperCase())
+      ) {
+        if (
+          this.connector?.historyRetrieved &&
+          msg.username !== 'Server Message'
+        ) {
+          exec('tput bel', (error, stdout, stderr) => {
+            process.stdout.write(stdout);
+          });
+        }
+      }
       this.printMessage(msg, isServerMsg);
       if (typeof this.currentInput === 'string' && this.currentInput !== '') {
         process.stdout.write(this.currentInput);

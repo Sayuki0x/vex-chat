@@ -15,10 +15,15 @@ interface ISubscription {
   id: string;
 }
 
-interface IUser {
-  username: string;
-  uuid: string;
-  hostname: string;
+interface IClient {
+  ID: number;
+  CreatedAt: string;
+  UpdatedAt: string;
+  DeletedAt: string | null;
+  PubKey: string;
+  Username: string;
+  PowerLevel: number;
+  UUID: string;
 }
 
 interface IChannel {
@@ -37,18 +42,20 @@ export class Connector extends EventEmitter {
   public connectedChannelId: string | null;
   public authed: boolean;
   public channelList: IChannel[];
+  public user: IClient | null;
+  public historyRetrieved: boolean;
   private ws: WebSocket | null;
   private host: string;
   private port: number;
   private subscriptions: ISubscription[];
   private registered: boolean;
-  private historyRetrieved: boolean;
   private serverAlive: boolean;
   private pingInterval: NodeJS.Timeout | null;
   private autoConnectChannel: string | null;
 
   constructor(host: string, port: number, autoConnectChannel?: string) {
     super();
+    this.user = null;
     this.ws = null;
     this.handshakeStatus = false;
     this.registered = false;
@@ -149,8 +156,8 @@ export class Connector extends EventEmitter {
       .where({ hostname: this.host });
 
     if (userQuery.length > 0) {
-      // const [user] = userQuery;
-      // this.user = user;
+      const [user] = userQuery;
+      this.user = user;
     }
 
     const serverQuery = await db
@@ -335,6 +342,9 @@ export class Connector extends EventEmitter {
         console.warn(err);
       }
       switch (jsonMessage.type) {
+        case 'clientInfo':
+          this.user = jsonMessage.client;
+          break;
         case 'serverMessage':
           console.log(jsonMessage.message + '\n');
           break;
