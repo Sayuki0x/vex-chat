@@ -234,7 +234,7 @@ export class InputTaker extends EventEmitter {
           );
           break;
         }
-        const [channelName, identifier] = commandArgs;
+        const [identifier, channelName] = commandArgs;
 
         if (isValidUUID(identifier)) {
           let channelFound = false;
