@@ -12,6 +12,7 @@ import { serverMessageUserID } from "./constants/serverID";
 import { getEmoji } from "./utils/getEmoji";
 import { normalizeStrLen } from "./utils/normalizeStrLen";
 import { printHelp } from "./utils/printHelp";
+import { printLicense } from "./utils/printLicense";
 import { sleep } from "./utils/sleep";
 
 const lambda = chalk.green.bold("λ ");
@@ -260,6 +261,7 @@ export class InputTaker extends EventEmitter {
     process.stdout.write("\x1B[1A");
     readline.cursorTo(process.stdin, 0);
     readline.clearLine(process.stdin, 1);
+
     switch (baseCommand) {
       case "/invite":
         if (!this.connector || !this.connector.handshakeStatus) {
@@ -364,15 +366,20 @@ export class InputTaker extends EventEmitter {
           stdio: "inherit",
         });
         npm.on("close", (code: number) => {
-          if (code === 0) {
-            this.spinner?.succeed("vex-chat upgraded successfully.");
+          if (code !== 0) {
+            console.log(
+              chalk.red.bold(`vex-chat upgrade failed`) +
+                ` with exit code ${code}.\n`
+            );
           } else {
-            this.spinner?.fail("vex-chat upgrade failed.");
+            console.log(
+              chalk.green.bold("vex-chat upgrade success.") +
+                " It must be restarted to use new update, use " +
+                chalk.bold("/exit") +
+                "\n"
+            );
           }
         });
-        // const npm = exec('npm i -g vex-chat');
-        // npm.stdout?.pipe(process.stdout);
-        // npm.stderr?.pipe(process.stderr);
         break;
       case "/lookup":
         if (!this.connector || !this.connector.handshakeStatus) {
@@ -566,6 +573,9 @@ export class InputTaker extends EventEmitter {
         }
 
         break;
+      case "/license":
+        printLicense(true);
+        break;
       case "/connect":
         if (!this.connector) {
           if (commandArgs.length === 0) {
@@ -585,7 +595,7 @@ export class InputTaker extends EventEmitter {
         this.shutdown();
         break;
       default:
-        if (this.connector?.connectedChannelId !== null) {
+        if (typeof this.connector?.connectedChannelId !== "undefined") {
           const isEmoji = /\:(.*?)\:/g;
           const matches: string[] | null = command.match(isEmoji);
           let message = command;
@@ -605,7 +615,7 @@ export class InputTaker extends EventEmitter {
           this.connector?.getWs()?.send(JSON.stringify(chatMessage));
           break;
         } else {
-          console.log("No command " + chalk.bold(command) + "\n");
+          console.log("No command " + command + " found.\n");
         }
     }
   }

@@ -4,53 +4,70 @@ import { normalizeStrLen } from "./normalizeStrLen";
 interface IHelpItem {
   command: string;
   description: string;
+  powerLevel: number;
 }
 
 const helpItems: IHelpItem[] = [
   {
     command: "/channel ls",
     description: "List channels on the server.",
+    powerLevel: 0,
   },
-  // {
-  //   command: '/channel new <channel_name> --arg',
-  //   description:
-  //     'Creates a new channel. Use ' +
-  //     chalk.bold('--private') +
-  //     ' for a private channel.',
-  // },
+  {
+    command: "/channel new <channel_name> --arg",
+    description:
+      "Creates a new channel. Use " +
+      chalk.bold("--private") +
+      " for a private channel.",
+    powerLevel: 50,
+  },
   {
     command: "/close",
     description: "Close the server connection.",
+    powerLevel: 0,
   },
   {
     command: "/connect <hostname>",
     description: "Connect to a server.",
+    powerLevel: 0,
   },
   {
     command: "/exit",
     description: "Exit the client.",
+    powerLevel: 0,
   },
   {
     command: "/help",
     description: "Show this menu.",
+    powerLevel: 0,
   },
   {
     command: "/join <identifier>",
     description: "Join the channel <identifier>",
+    powerLevel: 0,
+  },
+  {
+    command: "/leave",
+    description: "Leaves the channel <identifier>",
+    powerLevel: 0,
   },
   {
     command: "/nick <nickname>",
     description: "Change your nickname",
+    powerLevel: 0,
   },
 ];
 
-export function printHelpItem(item: IHelpItem) {
+export function printHelpItem(item: IHelpItem, powerLevel: number = 0) {
+  if (item.powerLevel > powerLevel) {
+    return;
+  }
   console.log(normalizeStrLen(chalk.bold(item.command), 40), item.description);
 }
 
-export function printHelp() {
+export function printHelp(powerLevel: number = 0) {
   for (const item of helpItems) {
-    printHelpItem(item);
+    printHelpItem(item, powerLevel);
   }
   console.log();
 }

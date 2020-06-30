@@ -13,7 +13,6 @@ printAscii();
 printLicense();
 
 export const { http, idFolder } = loadArgs();
-
 export const db = new Database(idFolder);
 export const input = new InputTaker();
 export const keyring = new KeyRing(idFolder);
