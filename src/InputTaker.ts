@@ -225,6 +225,7 @@ export class InputTaker extends EventEmitter {
       readline.clearLine(process.stdin, -1);
       readline.cursorTo(process.stdin, 0);
       if (
+        this.connector?.user?.Username &&
         msg.message
           .toUpperCase()
           .includes(this.connector?.user?.Username.toUpperCase())
