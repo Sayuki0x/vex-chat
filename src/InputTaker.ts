@@ -49,11 +49,21 @@ export class InputTaker extends EventEmitter {
     }
 
     process.stdin.on('keypress', (str: string, key) => {
-      if (key.sequence !== '\r') {
-        this.currentInput += str;
-      } else {
+      if (key.sequence === '\r') {
         this.currentInput = '';
+        return;
       }
+      if (key.sequence === '\x7F') {
+        if (this.currentInput === '') {
+          return;
+        }
+        this.currentInput = this.currentInput.substring(
+          0,
+          this.currentInput.length - 1
+        );
+        return;
+      }
+      this.currentInput += str;
     });
 
     this.rl.on('line', (line) => {
