@@ -1,8 +1,8 @@
 // tslint:disable: variable-name
 
-import chalk from 'chalk';
-import { EventEmitter } from 'events';
-import knex from 'knex';
+import chalk from "chalk";
+import { EventEmitter } from "events";
+import knex from "knex";
 
 export class Database extends EventEmitter {
   public ready: boolean;
@@ -11,7 +11,7 @@ export class Database extends EventEmitter {
   constructor(idFolder: string) {
     super();
     this.sql = knex({
-      client: 'sqlite3',
+      client: "sqlite3",
       connection: {
         filename: `${idFolder}/vex.db`,
       },
@@ -23,7 +23,7 @@ export class Database extends EventEmitter {
 
   public async storeServer(hostname: string, port: number, pubkey: string) {
     try {
-      await this.sql('servers').insert({
+      await this.sql("servers").insert({
         hostname,
         port,
         pubkey,
@@ -31,7 +31,7 @@ export class Database extends EventEmitter {
     } catch (err) {
       // if the error is due to unique key collision
       if (err.errno === 19) {
-        const serverQuery = await this.sql('servers')
+        const serverQuery = await this.sql("servers")
           .select()
           .where({ hostname });
 
@@ -40,22 +40,22 @@ export class Database extends EventEmitter {
         if (server.pubkey !== pubkey) {
           console.error(
             chalk.red.bold(
-              'Server public key has changed! Old public key was ' +
+              "Server public key has changed! Old public key was " +
                 server.pubkey +
-                ', but the server is broadcasting public key ' +
+                ", but the server is broadcasting public key " +
                 pubkey +
-                '. Someone might be trying to do the dirty!'
+                ". Someone might be trying to do the dirty!"
             )
           );
-          return 'KEYMISMATCH';
+          return "KEYMISMATCH";
         } else {
-          await this.sql('servers')
+          await this.sql("servers")
             .where({ hostname })
             .update({ port });
         }
       }
     }
-    return 'SUCCESS';
+    return "SUCCESS";
   }
 
   private async init(): Promise<void> {
@@ -66,7 +66,7 @@ export class Database extends EventEmitter {
     );
     const tableNames = tables.map((table: any) => table.name);
 
-    if (!tableNames.includes('servers')) {
+    if (!tableNames.includes("servers")) {
       await this.sql.raw(
         `CREATE TABLE "servers" (
            "hostname"	TEXT UNIQUE,
@@ -76,7 +76,7 @@ export class Database extends EventEmitter {
       );
     }
 
-    if (!tableNames.includes('accounts')) {
+    if (!tableNames.includes("accounts")) {
       await this.sql.raw(
         `CREATE TABLE "accounts" (
            "hostname"	TEXT UNIQUE,
@@ -86,7 +86,7 @@ export class Database extends EventEmitter {
       );
     }
 
-    if (!tableNames.includes('chat_messages')) {
+    if (!tableNames.includes("chat_messages")) {
       await this.sql.raw(
         `CREATE TABLE "chat_messages" (
           "id" NUMBER,

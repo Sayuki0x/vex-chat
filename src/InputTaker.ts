@@ -1,19 +1,20 @@
-import chalk from 'chalk';
-import { exec } from 'child_process';
-import { EventEmitter } from 'events';
-import moment from 'moment';
-import ora, { Ora } from 'ora';
-import readline, { createInterface } from 'readline';
-import { v4 as uuidv4 } from 'uuid';
-import { db } from './cli';
-import { Connector } from './Connector';
-import { isValidUUID } from './constants/regex';
-import { serverMessageUserID } from './constants/serverID';
-import { normalizeStrLen } from './utils/normalizeStrLen';
-import { printHelp } from './utils/printHelp';
-import { sleep } from './utils/sleep';
+import chalk from "chalk";
+import { exec, spawn } from "child_process";
+import { EventEmitter } from "events";
+import moment from "moment";
+import ora, { Ora } from "ora";
+import readline, { createInterface } from "readline";
+import { v4 as uuidv4 } from "uuid";
+import { db } from "./cli";
+import { Connector } from "./Connector";
+import { isValidUUID } from "./constants/regex";
+import { serverMessageUserID } from "./constants/serverID";
+import { getEmoji } from "./utils/getEmoji";
+import { normalizeStrLen } from "./utils/normalizeStrLen";
+import { printHelp } from "./utils/printHelp";
+import { sleep } from "./utils/sleep";
 
-const lambda = chalk.green.bold('λ ');
+const lambda = chalk.green.bold("λ ");
 
 export class InputTaker extends EventEmitter {
   private rl: readline.Interface;
@@ -27,10 +28,10 @@ export class InputTaker extends EventEmitter {
       historySize: 0,
       input: process.stdin,
       output: process.stdout,
-      prompt: '',
+      prompt: "",
     });
     this.connector = null;
-    this.currentInput = '';
+    this.currentInput = "";
     this.shutdown = this.shutdown.bind(this);
     this.handleConnect = this.handleConnect.bind(this);
     this.spinner = null;
@@ -42,8 +43,8 @@ export class InputTaker extends EventEmitter {
   }
 
   private async init() {
-    this.rl.on('SIGINT', this.shutdown);
-    process.on('SIGINT', this.shutdown);
+    this.rl.on("SIGINT", this.shutdown);
+    process.on("SIGINT", this.shutdown);
 
     let timeout = 1;
     while (!db.ready) {
@@ -51,13 +52,13 @@ export class InputTaker extends EventEmitter {
       timeout *= 2;
     }
 
-    process.stdin.on('keypress', (str: string, key) => {
-      if (key.sequence === '\r') {
-        this.currentInput = '';
+    process.stdin.on("keypress", (str: string, key) => {
+      if (key.sequence === "\r") {
+        this.currentInput = "";
         return;
       }
-      if (key.sequence === '\x7F') {
-        if (this.currentInput === '') {
+      if (key.sequence === "\x7F") {
+        if (this.currentInput === "") {
           return;
         }
         this.currentInput = this.currentInput.substring(
@@ -69,20 +70,20 @@ export class InputTaker extends EventEmitter {
       this.currentInput += str;
     });
 
-    this.rl.on('line', (line) => {
+    this.rl.on("line", (line) => {
       this.action(line.trim());
     });
   }
 
   private printMessage(jsonMessage: any, serverMessage: boolean) {
     const createdAt = moment(jsonMessage.CreatedAt || jsonMessage.created_at);
-    const timestamp = `${createdAt.format('HH:mm:ss')} › `;
+    const timestamp = `${createdAt.format("HH:mm:ss")} › `;
 
     let coloredMessage: string | null = null;
 
     if (
       jsonMessage.message.includes(this.connector?.user?.Username!) &&
-      jsonMessage.username !== 'Server Message'
+      jsonMessage.username !== "Server Message"
     ) {
       coloredMessage = (jsonMessage.message as string).replace(
         this.connector?.user?.Username!,
@@ -99,13 +100,13 @@ export class InputTaker extends EventEmitter {
             normalizeStrLen(
               jsonMessage.username +
                 chalk.dim(
-                  '#' +
-                    (jsonMessage.user_id || jsonMessage.userID).split('-')[1]
+                  "#" +
+                    (jsonMessage.user_id || jsonMessage.userID).split("-")[1]
                 ),
               30
             )
           )}${
-            jsonMessage.message.charAt(0) === '>'
+            jsonMessage.message.charAt(0) === ">"
               ? chalk.green(jsonMessage.message)
               : coloredMessage || jsonMessage.message
           }`
@@ -117,7 +118,7 @@ export class InputTaker extends EventEmitter {
     if (this.connector) {
       this.connector.close();
     }
-    console.log('Thanks for stopping by');
+    console.log("Thanks for stopping by");
     process.exit(0);
   }
 
@@ -129,13 +130,13 @@ export class InputTaker extends EventEmitter {
     if (!this.spinner) {
       if (!reconnect) {
         this.spinner = ora({
-          color: 'green',
+          color: "magenta",
           discardStdin: false,
           text: `Attempting login to vex server at ${chalk.bold(url)}\n`,
         }).start();
       } else {
         this.spinner = ora({
-          color: 'yellow',
+          color: "yellow",
           discardStdin: false,
           text: `Server not responding, attempting reconnect ${chalk.bold(
             url
@@ -143,12 +144,12 @@ export class InputTaker extends EventEmitter {
         }).start();
       }
     }
-    const components = url.split(':');
+    const components = url.split(":");
     let port = 8000;
-    let host = 'localhost';
+    let host = "localhost";
 
     if (components.length === 0) {
-      console.log('You need to provide at least an address, e.g., 127.0.0.1');
+      console.log("You need to provide at least an address, e.g., 127.0.0.1");
     }
 
     if (components.length >= 1) {
@@ -164,34 +165,34 @@ export class InputTaker extends EventEmitter {
       port,
       channelConnectID || undefined
     );
-    connector.on('failure', (err) => {
+    connector.on("failure", (err) => {
       if (reconnect) {
         this.connector?.close();
-        this.connector?.emit('unresponsive', channelConnectID);
+        this.connector?.emit("unresponsive", channelConnectID);
         this.connector = null;
         return;
       }
       if (err) {
         if (this.spinner) {
           this.spinner.fail(
-            'An error occurred: ' + chalk.red.bold(`${err.code}\n`)
+            "An error occurred: " + chalk.red.bold(`${err.code}\n`)
           );
           this.spinner = null;
-          if (err.code === 'DEPTH_ZERO_SELF_SIGNED_CERT') {
+          if (err.code === "DEPTH_ZERO_SELF_SIGNED_CERT") {
             console.log(
               `It looks like you may be trying to connect to a server that doesn\'t use https. Use ${chalk.bold(
-                '--unsafe'
+                "--unsafe"
               )} flag to start the program to do this, but you should only do it for development purposes.\n`
             );
           }
         } else {
-          console.log('An error occurred: ' + chalk.red.bold(`${err.code}\n`));
+          console.log("An error occurred: " + chalk.red.bold(`${err.code}\n`));
         }
       }
       this.connector?.close();
       this.connector = null;
     });
-    connector.on('success', () => {
+    connector.on("success", () => {
       if (this.spinner) {
         if (reconnect) {
           this.spinner.stop();
@@ -204,7 +205,7 @@ export class InputTaker extends EventEmitter {
         this.spinner = null;
       }
     });
-    connector.on('close', () => {
+    connector.on("close", () => {
       if (reconnect) {
         return;
       }
@@ -216,12 +217,12 @@ export class InputTaker extends EventEmitter {
       }
       this.connector = null;
     });
-    connector.on('unresponsive', async (cID: string) => {
+    connector.on("unresponsive", async (cID: string) => {
       await sleep(5000);
       this.handleConnect(url, true, cID);
     });
 
-    connector.on('msg', (msg: any, isServerMsg: boolean) => {
+    connector.on("msg", (msg: any, isServerMsg: boolean) => {
       readline.clearLine(process.stdin, -1);
       readline.cursorTo(process.stdin, 0);
       if (
@@ -232,15 +233,15 @@ export class InputTaker extends EventEmitter {
       ) {
         if (
           this.connector?.historyRetrieved &&
-          msg.username !== 'Server Message'
+          msg.username !== "Server Message"
         ) {
-          exec('tput bel', (error, stdout, stderr) => {
+          exec("tput bel", (error, stdout, stderr) => {
             process.stdout.write(stdout);
           });
         }
       }
       this.printMessage(msg, isServerMsg);
-      if (typeof this.currentInput === 'string' && this.currentInput !== '') {
+      if (typeof this.currentInput === "string" && this.currentInput !== "") {
         process.stdout.write(this.currentInput);
       }
     });
@@ -249,18 +250,18 @@ export class InputTaker extends EventEmitter {
   }
 
   private async action(command: string) {
-    const commandArgs = command.split(' ');
+    const commandArgs = command.split(" ");
 
     if (commandArgs.length === 0) {
       return;
     }
 
     const baseCommand = commandArgs.shift();
-    process.stdout.write('\x1B[1A');
+    process.stdout.write("\x1B[1A");
     readline.cursorTo(process.stdin, 0);
     readline.clearLine(process.stdin, 1);
     switch (baseCommand) {
-      case '/invite':
+      case "/invite":
         if (!this.connector || !this.connector.handshakeStatus) {
           console.log(
             `You're not logged in to a server! Connect first with /connect\n`
@@ -269,9 +270,9 @@ export class InputTaker extends EventEmitter {
         }
         if (commandArgs.length < 2) {
           console.log(
-            'A channel name and user tag or userID, e.g. ' +
-              chalk.bold('/invite channel_name Anonymous#2dcb') +
-              '\n'
+            "A channel name and user tag or userID, e.g. " +
+              chalk.bold("/invite channel_name Anonymous#2dcb") +
+              "\n"
           );
           break;
         }
@@ -284,13 +285,13 @@ export class InputTaker extends EventEmitter {
               const inviteChannelMsgId = uuidv4();
               const msg = {
                 messageID: inviteChannelMsgId,
-                method: 'CREATE',
+                method: "CREATE",
                 permission: {
                   channelID: channel.channelID,
                   powerLevel: 0,
                   userID: identifier,
                 },
-                type: 'channelPerm',
+                type: "channelPerm",
               };
               this.connector?.getWs()?.send(JSON.stringify(msg));
               channelFound = true;
@@ -298,18 +299,18 @@ export class InputTaker extends EventEmitter {
             }
           }
           if (!channelFound) {
-            console.log('No channel found ' + channelName + '\n');
+            console.log("No channel found " + channelName + "\n");
           }
           break;
         } else {
-          const idParts = identifier.split('#');
+          const idParts = identifier.split("#");
           if (idParts) {
             const [username, userTag] = idParts;
             const messageID = uuidv4();
             const userInfoMsg = {
               messageID,
-              method: 'RETRIEVE',
-              type: 'userInfo',
+              method: "RETRIEVE",
+              type: "userInfo",
               userTag,
               username,
             };
@@ -330,13 +331,13 @@ export class InputTaker extends EventEmitter {
                   const inviteChannelMsgId = uuidv4();
                   const msg = {
                     messageID: inviteChannelMsgId,
-                    method: 'CREATE',
+                    method: "CREATE",
                     permission: {
                       channelID: channel.channelID,
                       powerLevel: 0,
                       userID: UUID,
                     },
-                    type: 'channelPerm',
+                    type: "channelPerm",
                   };
                   this.connector?.getWs()?.send(JSON.stringify(msg));
                   channelFound = true;
@@ -344,7 +345,7 @@ export class InputTaker extends EventEmitter {
                 }
               }
               if (!channelFound) {
-                console.log('No channel found ' + channelName + '\n');
+                console.log("No channel found " + channelName + "\n");
               }
             });
 
@@ -352,7 +353,28 @@ export class InputTaker extends EventEmitter {
           }
         }
         break;
-      case '/lookup':
+      case "/upgrade":
+        console.log(
+          "Calling " +
+            chalk.magenta.bold("NPM") +
+            " to upgrade vex-chat. Please don't CTRL+C until process is finished."
+        );
+        const npm = spawn("npm", ["i", "-g", "vex-chat"], {
+          shell: true,
+          stdio: "inherit",
+        });
+        npm.on("close", (code: number) => {
+          if (code === 0) {
+            this.spinner?.succeed("vex-chat upgraded successfully.");
+          } else {
+            this.spinner?.fail("vex-chat upgrade failed.");
+          }
+        });
+        // const npm = exec('npm i -g vex-chat');
+        // npm.stdout?.pipe(process.stdout);
+        // npm.stderr?.pipe(process.stderr);
+        break;
+      case "/lookup":
         if (!this.connector || !this.connector.handshakeStatus) {
           console.log(
             `You're not logged in to a server! Connect first with /connect\n`
@@ -361,40 +383,40 @@ export class InputTaker extends EventEmitter {
         }
         if (commandArgs.length === 0) {
           console.log(
-            'A usertag is required, e.g. ' +
-              chalk.bold('/lookup Anonymous#2dcb') +
-              '\n'
+            "A usertag is required, e.g. " +
+              chalk.bold("/lookup Anonymous#2dcb") +
+              "\n"
           );
           break;
         }
-        const reqParts = commandArgs.shift()?.split('#');
+        const reqParts = commandArgs.shift()?.split("#");
 
         if (reqParts) {
           const [username, userTag] = reqParts;
           const userInfoMsg = {
             messageID: uuidv4(),
-            method: 'RETRIEVE',
-            type: 'userInfo',
+            method: "RETRIEVE",
+            type: "userInfo",
             userTag,
             username,
           };
           this.connector.getWs()?.send(JSON.stringify(userInfoMsg));
         }
         break;
-      case '/leave':
+      case "/leave":
         if (!this.connector?.connectedChannelId) {
           console.log(`You're not currently in a channel.`);
         } else {
           const leaveMsg = {
             channelID: this.connector?.connectedChannelId,
             messageID: uuidv4(),
-            method: 'LEAVE',
-            type: 'channel',
+            method: "LEAVE",
+            type: "channel",
           };
           this.connector.getWs()?.send(JSON.stringify(leaveMsg));
         }
         break;
-      case '/join':
+      case "/join":
         if (!this.connector || !this.connector.handshakeStatus) {
           console.log(
             `You're not logged in to a server! Connect first with /connect\n`
@@ -403,7 +425,7 @@ export class InputTaker extends EventEmitter {
         }
         if (commandArgs.length === 0) {
           console.log(
-            'A channel number is required, e.g. ' + chalk.bold('/join 1') + '\n'
+            "A channel number is required, e.g. " + chalk.bold("/join 1") + "\n"
           );
           break;
         }
@@ -412,8 +434,8 @@ export class InputTaker extends EventEmitter {
           const leaveMsg = {
             channelID: this.connector?.connectedChannelId,
             messageID: uuidv4(),
-            method: 'LEAVE',
-            type: 'channel',
+            method: "LEAVE",
+            type: "channel",
           };
           this.connector.getWs()?.send(JSON.stringify(leaveMsg));
         }
@@ -431,8 +453,8 @@ export class InputTaker extends EventEmitter {
             const msg = {
               channelID: channel.channelID,
               messageID: joinChannelMsgId,
-              method: 'JOIN',
-              type: 'channel',
+              method: "JOIN",
+              type: "channel",
             };
             this.connector?.getWs()?.send(JSON.stringify(msg));
             foundChannel = true;
@@ -440,10 +462,10 @@ export class InputTaker extends EventEmitter {
           }
         }
         if (!foundChannel) {
-          console.log('No channel found ' + id + '\n');
+          console.log("No channel found " + id + "\n");
         }
         break;
-      case '/close':
+      case "/close":
         if (this.connector) {
           this.connector.close();
           console.log(`Server connection closed.\n`);
@@ -454,10 +476,10 @@ export class InputTaker extends EventEmitter {
           );
         }
         break;
-      case '/help':
+      case "/help":
         printHelp();
         break;
-      case '/channel':
+      case "/channel":
         if (!this.connector || !this.connector.handshakeStatus) {
           console.log(
             `You're not logged in to a server! Connect first with /connect\n`
@@ -468,13 +490,13 @@ export class InputTaker extends EventEmitter {
         const arg = commandArgs.shift();
         if (!arg) {
           console.log(
-            '/channel command requires an argument [new, ls]. See /help for details.\n'
+            "/channel command requires an argument [new, ls]. See /help for details.\n"
           );
         }
-        if (arg === 'delete') {
+        if (arg === "delete") {
           if (commandArgs.length === 0) {
             console.log(
-              '/channel delete requires a name argument, eg. /channel delete 3cd23d1a-c267-4b4b-ab2a-1649b3aec322. See /help for details.\n'
+              "/channel delete requires a name argument, eg. /channel delete 3cd23d1a-c267-4b4b-ab2a-1649b3aec322. See /help for details.\n"
             );
             break;
           }
@@ -483,26 +505,26 @@ export class InputTaker extends EventEmitter {
           const message = {
             channelID,
             messageID: msgID,
-            method: 'DELETE',
-            type: 'channel',
+            method: "DELETE",
+            type: "channel",
           };
           this.connector?.getWs()?.send(JSON.stringify(message));
         }
-        if (arg === 'new') {
+        if (arg === "new") {
           if (commandArgs.length === 0) {
             console.log(
-              '/channel new requires a name argument, eg. /channel new General. See /help for details.\n'
+              "/channel new requires a name argument, eg. /channel new General. See /help for details.\n"
             );
           } else {
-            const privateChannel = commandArgs.includes('--private');
+            const privateChannel = commandArgs.includes("--private");
 
             const newChannelMsgId = uuidv4();
             const message = {
               messageID: newChannelMsgId,
-              method: 'CREATE',
+              method: "CREATE",
               name: commandArgs.shift(),
               privateChannel,
-              type: 'channel',
+              type: "channel",
             };
 
             this.connector?.subscribe(newChannelMsgId, (newMsg: any) => {
@@ -513,12 +535,12 @@ export class InputTaker extends EventEmitter {
           }
           break;
         }
-        if (arg === 'ls') {
+        if (arg === "ls") {
           this.connector.getChannelList();
           break;
         }
         break;
-      case '/nick':
+      case "/nick":
         if (!this.connector || !this.connector.handshakeStatus) {
           console.log(
             `You're not logged in to a server! Connect first with /connect\n`
@@ -527,39 +549,39 @@ export class InputTaker extends EventEmitter {
 
         if (commandArgs.length === 0) {
           console.log(
-            'You need a username as a parameter, e.g. ' +
-              chalk.bold('/nick NewUsername') +
-              '\n'
+            "You need a username as a parameter, e.g. " +
+              chalk.bold("/nick NewUsername") +
+              "\n"
           );
         } else {
           const username = commandArgs.shift();
 
           const userMessage = {
             channelID: this.connector?.connectedChannelId,
-            method: 'UPDATE',
-            type: 'user',
+            method: "UPDATE",
+            type: "user",
             username,
           };
           this.connector?.getWs()?.send(JSON.stringify(userMessage));
         }
 
         break;
-      case '/connect':
+      case "/connect":
         if (!this.connector) {
           if (commandArgs.length === 0) {
-            console.log('Enter the address:port of the vex server.');
-            this.rl.question('', this.handleConnect);
+            console.log("Enter the address:port of the vex server.");
+            this.rl.question("", this.handleConnect);
           } else {
             const host: string | undefined = commandArgs.shift();
             this.handleConnect(host!);
           }
         } else {
           console.log(
-            'You are already logged in to a server. Close connection with /close first.\n'
+            "You are already logged in to a server. Close connection with /close first.\n"
           );
         }
         break;
-      case '/exit':
+      case "/exit":
         this.shutdown();
         break;
       default:
@@ -577,129 +599,14 @@ export class InputTaker extends EventEmitter {
             channelID: this.connector?.connectedChannelId,
             message,
             messageID: uuidv4(),
-            method: 'CREATE',
-            type: 'chat',
+            method: "CREATE",
+            type: "chat",
           };
           this.connector?.getWs()?.send(JSON.stringify(chatMessage));
           break;
         } else {
-          console.log('No command ' + chalk.bold(command) + '\n');
+          console.log("No command " + chalk.bold(command) + "\n");
         }
     }
-  }
-}
-
-function getEmoji(str: string) {
-  switch (str) {
-    case ':maple_leaf':
-    case ':leaf:':
-      return '🍁';
-    case ':honey_pot:':
-      return '🍯';
-    case ':fire:':
-      return '🔥';
-    case ':wind_blowing:':
-    case ':wind:':
-      return '🌬️;';
-    case ':grinning:':
-      return '😀';
-    case ':grin:':
-      return '😁';
-    case ':happy:':
-      return '😃';
-    case ':smile:':
-      return '😄';
-    case ':weary:':
-      return '😩';
-    case ':laughing:':
-      return '😆';
-    case ':crown:':
-      return '👑';
-    case ':middle_finger:':
-      return '🖕';
-    case ':muscle:':
-      return '💪';
-    case ':triumph:':
-      return '😤';
-    case ':thumbsdown:':
-    case 'thumbdown:':
-    case ':-1:':
-      return '👎';
-    case ':thumbsup:':
-    case ':thumbup:':
-    case ':+1:':
-      return '👍';
-    case ':ok:':
-      return '👌';
-    case ':rage:':
-      return '😡';
-    case ':drool:':
-      return '🤤';
-    case ':clown:':
-      return '🤡';
-    case ':honk:':
-      return '📯';
-    case ':clap:':
-      return '👏';
-    case ':alien:':
-      return '👽';
-    case ':scream:':
-      return '😱';
-    case ':ghost:':
-      return '👻';
-    case ':sweat_drops:':
-      return '💦';
-    case ':poop:':
-      return '💩';
-    case ':tada:':
-      return '🎉';
-    case ':kiss:':
-      return '😘';
-    case ':monocle:':
-      return '🧐';
-    case ':wave:':
-      return '👋';
-    case ':sunglasses:':
-      return '😎';
-    case ':neutral:':
-      return '😐';
-    case ':rolling_eyes:':
-      return '🙄';
-    case ':100:':
-      return '💯';
-    case ':yawn:':
-      return '🥱';
-    case ':smirk:':
-      return '😏';
-    case ':frown:':
-      return '☹️';
-    case ':cry:':
-      return '😢';
-    case ':sob:':
-      return '😭';
-    case ':grimacing:':
-      return '😬';
-    case ':sweat:':
-      return '😅';
-    case ':slight_smile:':
-      return '🙂';
-    case ':heart_eyes':
-      return '😍';
-    case ':joy:':
-      return '😂';
-    case ':rofl:':
-      return '🤣';
-    case ':relaxed:':
-      return '☺️';
-    case ':upside_down:':
-      return '🙃';
-    case ':innocent:':
-      return '😇';
-    case ':blush:':
-      return '😊';
-    case ':wink':
-      return '😉';
-    default:
-      return str;
   }
 }

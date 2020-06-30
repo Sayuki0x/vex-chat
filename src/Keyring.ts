@@ -1,13 +1,13 @@
-import chalk from 'chalk';
-import fs from 'fs';
-import { sign, SignKeyPair } from 'tweetnacl';
-import { printHelp } from './utils/printHelp';
-import { fromHexString, toHexString } from './utils/typeHelpers';
+import chalk from "chalk";
+import fs from "fs";
+import { sign, SignKeyPair } from "tweetnacl";
+import { printHelp } from "./utils/printHelp";
+import { fromHexString, toHexString } from "./utils/typeHelpers";
 
 const configFolder = {
-  keyFolderName: 'keys',
-  privKey: 'key.priv',
-  pubKey: 'key.pub',
+  keyFolderName: "keys",
+  privKey: "key.priv",
+  pubKey: "key.pub",
 };
 
 export class KeyRing {
@@ -62,22 +62,22 @@ export class KeyRing {
       // generate and write keys to disk
       const signingKeys = sign.keyPair();
       fs.writeFileSync(this.pubKeyFile, toHexString(signingKeys.publicKey), {
-        encoding: 'utf8',
+        encoding: "utf8",
       });
       fs.writeFileSync(this.privKeyFile, toHexString(signingKeys.secretKey), {
-        encoding: 'utf8',
+        encoding: "utf8",
       });
     }
 
     const priv = fromHexString(
       fs.readFileSync(this.privKeyFile, {
-        encoding: 'utf8',
+        encoding: "utf8",
       })
     );
 
     if (priv.length !== 64) {
       throw new Error(
-        'Invalid keyfiles. Please generate new keyfiles and replace them in the signingKeys directory.'
+        "Invalid keyfiles. Please generate new keyfiles and replace them in the signingKeys directory."
       );
     }
 
@@ -85,13 +85,13 @@ export class KeyRing {
     this.signKeyPair = signKeyPair;
 
     console.log(
-      'Keyring initialized with public key ' +
-        chalk.bold(toHexString(this.getPub()) + '\n')
+      "Keyring initialized with public key " +
+        chalk.bold(toHexString(this.getPub()) + "\n")
     );
     printHelp();
     console.log(
       chalk.dim(
-        `Please enter a command. (Use ${chalk.bold('/help')} to see the menu)\n`
+        `Please enter a command. (Use ${chalk.bold("/help")} to see the menu)\n`
       )
     );
   }

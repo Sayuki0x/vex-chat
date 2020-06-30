@@ -1,4 +1,4 @@
-import { config } from 'dotenv';
+import { config } from "dotenv";
 
 /* 
   Populate process.env with vars from .env and verify required vars are present. 

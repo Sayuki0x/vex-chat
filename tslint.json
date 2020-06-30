@@ -2,7 +2,7 @@
   "defaultSeverity": "error",
   "jsRules": {},
   "rules": {
-    "quotemark": [true, "single"],
+    "quotemark": [true, "double"],
     "no-console": [true, "never"],
     "trailing-comma": [
       true,
