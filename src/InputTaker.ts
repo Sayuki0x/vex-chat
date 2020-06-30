@@ -651,6 +651,8 @@ function getEmoji(str: string) {
       return '💦';
     case ':poop:':
       return '💩';
+    case ':tada:':
+      return '🎉';
     case ':kiss:':
       return '😘';
     case ':monocle:':
