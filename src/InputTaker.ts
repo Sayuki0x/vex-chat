@@ -210,7 +210,7 @@ export class InputTaker extends EventEmitter {
       readline.clearLine(process.stdin, -1);
       readline.cursorTo(process.stdin, 0);
       this.printMessage(msg, isServerMsg);
-      if (this.currentInput) {
+      if (typeof this.currentInput === 'string' && this.currentInput !== '') {
         process.stdout.write(this.currentInput);
       }
     });
