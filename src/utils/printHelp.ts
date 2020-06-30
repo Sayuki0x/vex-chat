@@ -9,12 +9,17 @@ interface IHelpItem {
 
 const helpItems: IHelpItem[] = [
   {
+    command: "/ban <user>",
+    description: "Bans the user from the server.",
+    powerLevel: 50,
+  },
+  {
     command: "/channel ls",
     description: "List channels on the server.",
     powerLevel: 0,
   },
   {
-    command: "/channel new <channel_name>",
+    command: "/channel new <channel>",
     description:
       "Creates a new channel. Use " +
       chalk.bold("--private") +
@@ -52,8 +57,18 @@ const helpItems: IHelpItem[] = [
     powerLevel: 0,
   },
   {
+    command: "/kick <user>",
+    description: "Kicks the user from the server.",
+    powerLevel: 50,
+  },
+  {
     command: "/leave",
     description: "Leaves the channel.",
+    powerLevel: 0,
+  },
+  {
+    command: "/lookup <user>",
+    description: "Displays basic info on the user.",
     powerLevel: 0,
   },
   {

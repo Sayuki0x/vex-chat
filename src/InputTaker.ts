@@ -1,21 +1,18 @@
 import chalk from "chalk";
-import { exec, spawn } from "child_process";
+import { exec } from "child_process";
 import { EventEmitter } from "events";
 import moment from "moment";
-import ora, { Ora } from "ora";
+import ora from "ora";
 import readline, { createInterface } from "readline";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "./cli";
 import { Connector } from "./Connector";
 import { isValidUUID } from "./constants/regex";
-import { serverMessageUserID } from "./constants/serverID";
 import { getEmoji } from "./utils/getEmoji";
 import { normalizeStrLen } from "./utils/normalizeStrLen";
 import { printHelp } from "./utils/printHelp";
 import { printLicense } from "./utils/printLicense";
 import { sleep } from "./utils/sleep";
-
-const lambda = chalk.green.bold("λ ");
 
 export class InputTaker extends EventEmitter {
   private rl: readline.Interface;
@@ -217,6 +214,7 @@ export class InputTaker extends EventEmitter {
       }
     });
     connector.on("close", () => {
+      console.log("Server connection closed.\n");
       if (reconnect) {
         return;
       }
@@ -260,6 +258,16 @@ export class InputTaker extends EventEmitter {
     this.connector = connector;
   }
 
+  private async sendKickMessage(userID: string, ban: boolean = false) {
+    const kickMessage = {
+      method: ban ? "BAN" : "KICK",
+      type: "user",
+      userID,
+    };
+
+    this.connector?.getWs()?.send(JSON.stringify(kickMessage));
+  }
+
   private async action(command: string) {
     const commandArgs = command.split(" ");
 
@@ -273,6 +281,96 @@ export class InputTaker extends EventEmitter {
     readline.clearLine(process.stdin, 1);
 
     switch (baseCommand) {
+      case "/ban":
+        if (!this.connector || !this.connector.handshakeStatus) {
+          console.log(
+            `You're not logged in to a server! Connect first with /connect\n`
+          );
+          break;
+        }
+        if (commandArgs.length < 1) {
+          console.log("/kick requires a usertag or userID argument.");
+          break;
+        }
+        const [banID] = commandArgs;
+
+        if (isValidUUID(banID)) {
+          await this.sendKickMessage(banID, true);
+        } else {
+          const idParts = banID.split("#");
+          if (idParts) {
+            const [username, userTag] = idParts;
+            const messageID = uuidv4();
+            const userInfoMsg = {
+              messageID,
+              method: "RETRIEVE",
+              type: "userInfo",
+              userTag,
+              username,
+            };
+
+            this.connector.subscribe(messageID, async (jsonMessage: any) => {
+              if (jsonMessage.matchList.length > 1) {
+                console.log(
+                  `Multiple users match tag. Please use the user's exact UUID instead.`
+                );
+                return;
+              }
+              const [usr] = jsonMessage.matchList;
+              const { UUID } = usr;
+
+              await this.sendKickMessage(UUID, true);
+            });
+
+            this.connector.getWs()?.send(JSON.stringify(userInfoMsg));
+          }
+        }
+        break;
+      case "/kick":
+        if (!this.connector || !this.connector.handshakeStatus) {
+          console.log(
+            `You're not logged in to a server! Connect first with /connect\n`
+          );
+          break;
+        }
+        if (commandArgs.length < 1) {
+          console.log("/kick requires a usertag or userID argument.");
+          break;
+        }
+        const [ident] = commandArgs;
+
+        if (isValidUUID(ident)) {
+          await this.sendKickMessage(ident);
+        } else {
+          const idParts = ident.split("#");
+          if (idParts) {
+            const [username, userTag] = idParts;
+            const messageID = uuidv4();
+            const userInfoMsg = {
+              messageID,
+              method: "RETRIEVE",
+              type: "userInfo",
+              userTag,
+              username,
+            };
+
+            this.connector.subscribe(messageID, async (jsonMessage: any) => {
+              if (jsonMessage.matchList.length > 1) {
+                console.log(
+                  `Multiple users match tag. Please use the user's exact UUID instead.`
+                );
+                return;
+              }
+              const [usr] = jsonMessage.matchList;
+              const { UUID } = usr;
+
+              await this.sendKickMessage(UUID);
+            });
+
+            this.connector.getWs()?.send(JSON.stringify(userInfoMsg));
+          }
+        }
+        break;
       case "/invite":
         if (!this.connector || !this.connector.handshakeStatus) {
           console.log(
@@ -489,8 +587,8 @@ export class InputTaker extends EventEmitter {
         break;
       case "/close":
         if (this.connector) {
+          console.log(`Closing connection ${this.connector.getHost()} to .\n`);
           this.connector.close();
-          console.log(`Server connection closed.\n`);
           this.connector = null;
         } else {
           console.log(

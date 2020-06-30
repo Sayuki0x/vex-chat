@@ -281,7 +281,7 @@ export class Connector extends EventEmitter {
       } else {
         failedCount = 0;
       }
-      if (failedCount >= 1) {
+      if (failedCount > 1) {
         this.emit("unresponsive", this.connectedChannelId);
         this.close();
         return;
@@ -346,7 +346,7 @@ export class Connector extends EventEmitter {
           this.user = jsonMessage.client;
           break;
         case "serverMessage":
-          console.log(jsonMessage.message + "\n");
+          console.log(jsonMessage.message);
           break;
         case "channelPermRes":
           if (jsonMessage.status === "SUCCESS") {
