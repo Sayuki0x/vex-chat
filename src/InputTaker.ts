@@ -606,6 +606,8 @@ function getEmoji(str: string) {
       return '🤤';
     case ':clown:':
       return '🤡';
+    case ':honk:':
+      return '📯';
     case ':clap:':
       return '👏';
     case ':alien:':
