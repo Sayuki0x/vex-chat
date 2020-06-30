@@ -98,17 +98,22 @@ export class InputTaker extends EventEmitter {
       const userColor =
         "#" +
         (jsonMessage.user_id || (jsonMessage.userID as string)).slice(0, 6);
+
       console.log(
         chalk.dim(timestamp) +
           `${chalk.bold(
-            normalizeStrLen(
-              chalk.hex(userColor).bold(jsonMessage.username) +
-                chalk.dim(
-                  "#" +
-                    (jsonMessage.user_id || jsonMessage.userID).split("-")[1]
-                ),
-              57
-            )
+            chalk
+              .hex(userColor)
+              .bold(
+                normalizeStrLen(
+                  jsonMessage.username +
+                    "#" +
+                    chalk.dim(
+                      (jsonMessage.user_id || jsonMessage.userID).split("-")[1]
+                    ),
+                  30
+                )
+              )
           )}${
             jsonMessage.message.charAt(0) === ">"
               ? chalk.green(jsonMessage.message)

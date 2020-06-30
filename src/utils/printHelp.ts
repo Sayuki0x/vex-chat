@@ -48,8 +48,7 @@ const helpItems: IHelpItem[] = [
   },
   {
     command: "/join <#>",
-    description:
-      "Join the channel <#>. You can also use number/name/channelID.",
+    description: "Join the channel <#>.",
     powerLevel: 0,
   },
   {
