@@ -624,6 +624,8 @@ function getEmoji(str: string) {
       return '😐';
     case ':rolling_eyes:':
       return '🙄';
+    case ':100:':
+      return '💯';
     case ':yawn:':
       return '🥱';
     case ':smirk:':
