@@ -22,6 +22,7 @@ export class InputTaker extends EventEmitter {
   constructor() {
     super();
     this.rl = createInterface({
+      historySize: 0,
       input: process.stdin,
       output: process.stdout,
       prompt: '',
