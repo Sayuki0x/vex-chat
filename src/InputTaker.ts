@@ -357,29 +357,34 @@ export class InputTaker extends EventEmitter {
         break;
       case "/upgrade":
         console.log(
-          "Calling " +
-            chalk.magenta.bold("NPM") +
-            " to upgrade vex-chat. Please don't CTRL+C until process is finished."
+          "Exit the program and use " +
+            chalk.bold("npm i -g vex-chat") +
+            " to upgrade."
         );
-        const npm = spawn("npm", ["i", "-g", "vex-chat"], {
-          shell: true,
-          stdio: "inherit",
-        });
-        npm.on("close", (code: number) => {
-          if (code !== 0) {
-            console.log(
-              chalk.red.bold(`vex-chat upgrade failed`) +
-                ` with exit code ${code}.\n`
-            );
-          } else {
-            console.log(
-              chalk.green.bold("vex-chat upgrade success.") +
-                " It must be restarted to use new update, use " +
-                chalk.bold("/exit") +
-                "\n"
-            );
-          }
-        });
+        // console.log(
+        //   "Calling " +
+        //     chalk.magenta.bold("NPM") +
+        //     " to upgrade vex-chat. Please don't CTRL+C until process is finished."
+        // );
+        // const npm = spawn("npm", ["i", "-g", "vex-chat"], {
+        //   shell: true,
+        //   stdio: "inherit",
+        // });
+        // npm.on("close", (code: number) => {
+        //   if (code !== 0) {
+        //     console.log(
+        //       chalk.red.bold(`vex-chat upgrade failed`) +
+        //         ` with exit code ${code}.\n`
+        //     );
+        //   } else {
+        //     console.log(
+        //       chalk.green.bold("vex-chat upgrade success.") +
+        //         " It must be restarted to use new update, use " +
+        //         chalk.bold("/exit") +
+        //         "\n"
+        //     );
+        //   }
+        // });
         break;
       case "/lookup":
         if (!this.connector || !this.connector.handshakeStatus) {
