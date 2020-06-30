@@ -12,6 +12,7 @@
     "start": "node ./dist/cli.js",
     "build": "node ./scripts/versionUpdate.js; node ./node_modules/typescript/bin/tsc; chmod +x ./dist/cli.js",
     "prepack": "yarn build",
+    "postpublish": "git push",
     "prettier": "node ./node_modules/prettier/bin-prettier.js '**/*.{ts,tsx,json,md}' --trailing-comma es5 --ignore-path .gitignore --single-quote --arrow-parens always --write",
     "lint": "./node_modules/tslint/bin/tslint src/**/*.ts{,x}",
     "lint-fix": "./node_modules/tslint/bin/tslint src/**/*.ts{,x} --fix"
@@ -22,7 +23,7 @@
     "prettier": "^1.19.1",
     "tslint": "^5.20.1",
     "tslint-config-prettier": "^1.18.0",
-    "typescript": "^3.7.2"
+    "typescript": "^3.9.5"
   },
   "lint-staged": {
     "src/**/*.{ts}": [

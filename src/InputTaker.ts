@@ -533,9 +533,18 @@ export class InputTaker extends EventEmitter {
         break;
       default:
         if (this.connector?.connectedChannelId !== null) {
+          const isEmoji = /\:(.*?)\:/g;
+          const matches: string[] | null = command.match(isEmoji);
+          let message = command;
+          if (matches) {
+            for (const match of matches) {
+              message = message.replace(match, getEmoji(match));
+            }
+          }
+
           const chatMessage = {
             channelID: this.connector?.connectedChannelId,
-            message: command,
+            message,
             messageID: uuidv4(),
             method: 'CREATE',
             type: 'chat',
@@ -546,5 +555,108 @@ export class InputTaker extends EventEmitter {
           console.log('No command ' + chalk.bold(command) + '\n');
         }
     }
+  }
+}
+
+function getEmoji(str: string) {
+  switch (str) {
+    case ':maple_leaf':
+    case ':leaf:':
+      return '🍁';
+    case ':honey_pot:':
+      return '🍯';
+    case ':fire:':
+      return '🔥';
+    case ':wind_blowing:':
+    case ':wind:':
+      return '🌬️;';
+    case ':grinning:':
+      return '😀';
+    case ':grin:':
+      return '😁';
+    case ':happy:':
+      return '😃';
+    case ':smile:':
+      return '😄';
+    case ':weary:':
+      return '😩';
+    case ':laughing:':
+      return '😆';
+    case ':crown:':
+      return '👑';
+    case ':middle_finger:':
+      return '🖕';
+    case ':muscle:':
+      return '💪';
+    case ':triumph:':
+      return '😤';
+    case ':thumbsdown:':
+    case 'thumbdown:':
+    case ':-1:':
+      return '👎';
+    case ':thumbsup:':
+    case ':thumbup:':
+    case ':+1:':
+      return '👍';
+    case ':ok:':
+      return '👌';
+    case ':rage:':
+      return '😡';
+    case ':drool:':
+      return '🤤';
+    case ':clown:':
+      return '🤡';
+    case ':clap:':
+      return '👏';
+    case ':alien:':
+      return '👽';
+    case ':scream:':
+      return '😱';
+    case ':ghost:':
+      return '💩';
+    case ':kiss:':
+      return '😘';
+    case ':monocle:':
+      return '🧐';
+    case ':sunglasses:':
+      return '😎';
+    case ':neutral:':
+      return '😐';
+    case ':rolling_eyes:':
+      return '🙄';
+    case ':yawn:':
+      return '🥱';
+    case ':smirk:':
+      return '😏';
+    case ':frown:':
+      return '☹️';
+    case ':cry:':
+      return '😢';
+    case ':sob:':
+      return '😭';
+    case ':grimacing:':
+      return '😬';
+    case ':sweat:':
+      return '😅';
+    case ':slight_smile:':
+      return '🙂';
+    case ':heart_eyes':
+      return '😍';
+    case ':joy:':
+      return '😂';
+    case ':rofl:':
+      return '🤣';
+    case ':relaxed:':
+      return '☺️';
+    case ':upside_down:':
+      return '🙃';
+    case ':innocent:':
+      return '😇';
+    case ':blush:':
+      return '😊';
+    case ':wink':
+      return '😉';
+    default:
+      return str;
   }
 }
