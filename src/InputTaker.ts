@@ -130,7 +130,100 @@ export class InputTaker extends EventEmitter {
     process.exit(0);
   }
 
-  private handleConnect(
+  private channelPerm(commandArgs: string[], method: string) {
+    if (!this.connector || !this.connector.handshakeStatus) {
+      console.log(
+        `You're not logged in to a server! Connect first with /connect\n`
+      );
+      return;
+    }
+    if (commandArgs.length < 2) {
+      console.log(
+        "A channel name and user tag or userID, e.g. " +
+          chalk.bold("/invite channel Anonymous#2dcb") +
+          "\n"
+      );
+      return;
+    }
+    const [identifier, channelName] = commandArgs;
+
+    if (isValidUUID(identifier)) {
+      let channelFound = false;
+      for (const channel of this.connector!.channelList) {
+        if (channel.name === channelName) {
+          const inviteChannelMsgId = uuidv4();
+          const msg = {
+            messageID: inviteChannelMsgId,
+            method: "CREATE",
+            permission: {
+              channelID: channel.channelID,
+              powerLevel: 0,
+              userID: identifier,
+            },
+            type: "channelPerm",
+          };
+          this.connector?.getWs()?.send(JSON.stringify(msg));
+          channelFound = true;
+          break;
+        }
+      }
+      if (!channelFound) {
+        console.log("No channel found " + channelName + "\n");
+      }
+      return;
+    } else {
+      const idParts = identifier.split("#");
+      if (idParts) {
+        const [username, userTag] = idParts;
+        const messageID = uuidv4();
+        const userInfoMsg = {
+          messageID,
+          method: "RETRIEVE",
+          type: "userInfo",
+          userTag,
+          username,
+        };
+
+        this.connector?.subscribe(messageID, (jsonMessage: any) => {
+          if (jsonMessage.matchList.length > 1) {
+            console.log(
+              `Multiple users match tag. Please use the user's exact UUID instead.`
+            );
+            return;
+          }
+          const [usr] = jsonMessage.matchList;
+          const { UUID } = usr;
+
+          let channelFound = false;
+          for (const channel of this.connector!.channelList) {
+            if (channel.name === channelName) {
+              const inviteChannelMsgId = uuidv4();
+              const msg = {
+                messageID: inviteChannelMsgId,
+                method,
+                permission: {
+                  channelID: channel.channelID,
+                  powerLevel: 0,
+                  userID: UUID,
+                },
+                type: "channelPerm",
+              };
+              this.connector?.getWs()?.send(JSON.stringify(msg));
+              channelFound = true;
+              break;
+            }
+          }
+          if (!channelFound) {
+            console.log("No channel found " + channelName + "\n");
+          }
+        });
+
+        this.connector?.getWs()?.send(JSON.stringify(userInfoMsg));
+      }
+    }
+  }
+
+  private async handleConnect(
     url: string,
     reconnect: boolean = false,
     channelConnectID?: string
@@ -150,6 +243,7 @@ export class InputTaker extends EventEmitter {
             url
           )}\n`,
         }).start();
+        await sleep(5000);
       }
     }
     const components = url.split(":");
@@ -205,6 +299,7 @@ export class InputTaker extends EventEmitter {
         if (reconnect) {
           this.spinner.stop();
           reconnect = false;
+          this.spinner = null;
         } else {
           this.spinner.succeed(
             `Login succeeded to vex server at ${chalk.bold(host)} 🎉\n`
@@ -214,20 +309,13 @@ export class InputTaker extends EventEmitter {
       }
     });
     connector.on("close", () => {
-      console.log("Server connection closed.\n");
       if (reconnect) {
         return;
+      } else {
+        this.connector?.emit("unresponsive");
       }
-      if (this.spinner) {
-        this.spinner.fail(
-          `Login failed to vex server at ${chalk.bold(host)}\n`
-        );
-        this.spinner = null;
-      }
-      this.connector = null;
     });
     connector.on("unresponsive", async (cID: string) => {
-      await sleep(5000);
       this.handleConnect(url, true, cID);
     });
 
@@ -371,97 +459,11 @@ export class InputTaker extends EventEmitter {
           }
         }
         break;
-      case "/invite":
-        if (!this.connector || !this.connector.handshakeStatus) {
-          console.log(
-            `You're not logged in to a server! Connect first with /connect\n`
-          );
-          break;
-        }
-        if (commandArgs.length < 2) {
-          console.log(
-            "A channel name and user tag or userID, e.g. " +
-              chalk.bold("/invite channel Anonymous#2dcb") +
-              "\n"
-          );
-          break;
-        }
-        const [identifier, channelName] = commandArgs;
-
-        if (isValidUUID(identifier)) {
-          let channelFound = false;
-          for (const channel of this.connector!.channelList) {
-            if (channel.name === channelName) {
-              const inviteChannelMsgId = uuidv4();
-              const msg = {
-                messageID: inviteChannelMsgId,
-                method: "CREATE",
-                permission: {
-                  channelID: channel.channelID,
-                  powerLevel: 0,
-                  userID: identifier,
-                },
-                type: "channelPerm",
-              };
-              this.connector?.getWs()?.send(JSON.stringify(msg));
-              channelFound = true;
-              break;
-            }
-          }
-          if (!channelFound) {
-            console.log("No channel found " + channelName + "\n");
-          }
-          break;
-        } else {
-          const idParts = identifier.split("#");
-          if (idParts) {
-            const [username, userTag] = idParts;
-            const messageID = uuidv4();
-            const userInfoMsg = {
-              messageID,
-              method: "RETRIEVE",
-              type: "userInfo",
-              userTag,
-              username,
-            };
-
-            this.connector.subscribe(messageID, (jsonMessage: any) => {
-              if (jsonMessage.matchList.length > 1) {
-                console.log(
-                  `Multiple users match tag. Please use the user's exact UUID instead.`
-                );
-                return;
-              }
-              const [usr] = jsonMessage.matchList;
-              const { UUID } = usr;
-
-              let channelFound = false;
-              for (const channel of this.connector!.channelList) {
-                if (channel.name === channelName) {
-                  const inviteChannelMsgId = uuidv4();
-                  const msg = {
-                    messageID: inviteChannelMsgId,
-                    method: "CREATE",
-                    permission: {
-                      channelID: channel.channelID,
-                      powerLevel: 0,
-                      userID: UUID,
-                    },
-                    type: "channelPerm",
-                  };
-                  this.connector?.getWs()?.send(JSON.stringify(msg));
-                  channelFound = true;
-                  break;
-                }
-              }
-              if (!channelFound) {
-                console.log("No channel found " + channelName + "\n");
-              }
-            });
-
-            this.connector.getWs()?.send(JSON.stringify(userInfoMsg));
-          }
-        }
+      case "/grant":
+        this.channelPerm(commandArgs, "CREATE");
+        break;
+      case "/revoke":
+        this.channelPerm(commandArgs, "DELETE");
         break;
       case "/upgrade":
         console.log(
@@ -587,7 +589,7 @@ export class InputTaker extends EventEmitter {
         break;
       case "/close":
         if (this.connector) {
-          console.log(`Closing connection ${this.connector.getHost()} to .\n`);
+          console.log(`Closing connection to ${this.connector.getHost()}.\n`);
           this.connector.close();
           this.connector = null;
         } else {
@@ -708,7 +710,10 @@ export class InputTaker extends EventEmitter {
         this.shutdown();
         break;
       default:
-        if (typeof this.connector?.connectedChannelId !== "undefined") {
+        if (
+          typeof this.connector?.connectedChannelId !== "undefined" &&
+          typeof this.connector?.connectedChannelId !== "object"
+        ) {
           const isEmoji = /\:(.*?)\:/g;
           const matches: string[] | null = command.match(isEmoji);
           let message = command;

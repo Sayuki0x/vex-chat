@@ -37,6 +37,11 @@ const helpItems: IHelpItem[] = [
     powerLevel: 0,
   },
   {
+    command: "/grant <user> <channel>",
+    description: "Grants user permission to channel.",
+    powerLevel: 50,
+  },
+  {
     command: "/exit",
     description: "Exit the client.",
     powerLevel: 0,
@@ -45,11 +50,6 @@ const helpItems: IHelpItem[] = [
     command: "/help",
     description: "Show this menu.",
     powerLevel: 0,
-  },
-  {
-    command: "/invite <user> <channel>",
-    description: "Gives user permission to channel.",
-    powerLevel: 50,
   },
   {
     command: "/join <#>",
@@ -75,6 +75,11 @@ const helpItems: IHelpItem[] = [
     command: "/license",
     description: "Prints the license.",
     powerLevel: 0,
+  },
+  {
+    command: "/revoke <user> <channel>",
+    description: "Revokes user permission to channel.",
+    powerLevel: 50,
   },
   {
     command: "/upgrade",
