@@ -105,6 +105,24 @@ export class Database extends EventEmitter {
       );
     }
 
+    const chatMessagesCols = await this.sql.raw(
+      "PRAGMA table_info(chat_messages);"
+    );
+
+    let transmissionIdRow = false;
+    for (const col of chatMessagesCols) {
+      if (col.name === "transmission_id") {
+        transmissionIdRow = true;
+      }
+    }
+
+    // for v0 to v1 api upgrade
+    if (!transmissionIdRow) {
+      await this.sql.raw(
+        "ALTER TABLE chat_messages ADD COLUMN transmission_id TEXT;"
+      );
+    }
+
     this.ready = true;
   }
 }

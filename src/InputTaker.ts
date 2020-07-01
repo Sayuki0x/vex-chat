@@ -74,8 +74,6 @@ export class InputTaker extends EventEmitter {
   }
 
   private printMessage(jsonMessage: any, serverMessage: boolean) {
-    console.log(jsonMessage);
-
     const createdAt = moment(jsonMessage.CreatedAt || jsonMessage.created_at);
     const timestamp = `${createdAt.format("HH:mm:ss")} › `;
 

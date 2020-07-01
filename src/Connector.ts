@@ -337,13 +337,22 @@ export class Connector extends EventEmitter {
       let jsonMessage;
       try {
         jsonMessage = JSON.parse(msg);
-
+        let error = false;
         for (const message of this.subscriptions) {
           if (message.id === jsonMessage.transmissionID) {
+            if (jsonMessage.type === "error") {
+              console.log(jsonMessage.message);
+              error = true;
+              break;
+            }
+
             await message.callback(jsonMessage);
             this.subscriptions.splice(this.subscriptions.indexOf(message), 1);
             return;
           }
+        }
+        if (error) {
+          return;
         }
       } catch (err) {
         console.warn(err);
@@ -413,13 +422,12 @@ export class Connector extends EventEmitter {
           try {
             await db.sql("chat_messages").insert({
               channel_id: jsonMessage.channelID,
-              created_at: jsonMessage.CreatedAt,
-              deleted_at: jsonMessage.DeletedAt,
-              id: jsonMessage.ID,
+              created_at: jsonMessage.createdAt,
+              id: jsonMessage.index,
               message: jsonMessage.message,
-              message_id: jsonMessage.transmissionID,
+              message_id: jsonMessage.messageID,
               server: this.host,
-              updated_at: jsonMessage.UpdatedAt,
+              transmission_id: jsonMessage.transmissionID,
               user_id: jsonMessage.userID,
               username: jsonMessage.username,
             });
