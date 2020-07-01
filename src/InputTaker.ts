@@ -110,9 +110,9 @@ export class InputTaker extends EventEmitter {
                           "-"
                         )[1]
                     ),
-                  30
+                  25
                 )
-              )
+              ) + chalk.dim("║ ")
           )}${
             jsonMessage.message.charAt(0) === ">"
               ? chalk.green(jsonMessage.message)
@@ -354,6 +354,17 @@ export class InputTaker extends EventEmitter {
     };
 
     this.connector?.getWs()?.send(JSON.stringify(kickMessage));
+  }
+
+  private async sendChatMessage(message: string) {
+    const chatMessage = {
+      channelID: this.connector?.connectedChannelId,
+      message,
+      messageID: uuidv4(),
+      method: "CREATE",
+      type: "chat",
+    };
+    this.connector?.getWs()?.send(JSON.stringify(chatMessage));
   }
 
   private async action(command: string) {
@@ -723,18 +734,23 @@ export class InputTaker extends EventEmitter {
             }
           }
 
-          const chatMessage = {
-            channelID: this.connector?.connectedChannelId,
-            message,
-            messageID: uuidv4(),
-            method: "CREATE",
-            type: "chat",
-          };
-          this.connector?.getWs()?.send(JSON.stringify(chatMessage));
+          if (message.length > 60) {
+            const messageChunks = chunkString(message, 60);
+            for (const msg of messageChunks!) {
+              this.sendChatMessage(msg);
+            }
+          } else {
+            this.sendChatMessage(message);
+          }
+
           break;
         } else {
           console.log("No command " + command + " found.\n");
         }
     }
   }
+}
+
+function chunkString(str: string, length: number) {
+  return str.match(new RegExp(".{1," + length + "}", "g"));
 }
