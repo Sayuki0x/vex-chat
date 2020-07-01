@@ -180,26 +180,35 @@ export class Connector extends EventEmitter {
     };
 
     this.subscribe(transmissionID, async (msg: any) => {
-      if (
-        keyring.verify(
-          decodeUTF8(challenge),
-          fromHexString(msg.response),
-          // prefer database pubkey but fall through to msg pubkey for new servers
-          fromHexString(pubkey || msg.pubkey)
-        )
-      ) {
-        if (newServer) {
-          await db
-            .sql("servers")
-            .where({ hostname: this.host })
-            .update({ pubkey: pubkey || msg.pubkey });
+      try {
+        if (
+          keyring.verify(
+            decodeUTF8(challenge),
+            fromHexString(msg.response),
+            // prefer database pubkey but fall through to msg pubkey for new servers
+            fromHexString(pubkey || msg.pubkey)
+          )
+        ) {
+          if (newServer) {
+            await db
+              .sql("servers")
+              .where({ hostname: this.host })
+              .update({ pubkey: pubkey || msg.pubkey });
+          }
+          this.handshakeStatus = true;
+        } else {
+          console.log(
+            chalk.yellow.bold("Server sent back bad signature! Disconnecting.")
+          );
+          ws.close();
         }
-        this.handshakeStatus = true;
-      } else {
+      } catch (err) {
         console.log(
-          chalk.yellow.bold("Server sent back bad signature! Disconnecting.")
+          chalk.red.bold(
+            "Server sent back an invalid signature. Somone may be trying to do something nasty!"
+          )
         );
-        ws.close();
+        process.exit(1);
       }
     });
 
