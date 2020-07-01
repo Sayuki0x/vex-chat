@@ -313,6 +313,7 @@ export class InputTaker extends EventEmitter {
       }
     });
     connector.on("unresponsive", async (cID: string) => {
+      this.connector?.close();
       this.connector = null;
       this.handleConnect(url, true, cID);
     });
