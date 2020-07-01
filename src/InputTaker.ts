@@ -151,15 +151,14 @@ export class InputTaker extends EventEmitter {
       let channelFound = false;
       for (const channel of this.connector!.channelList) {
         if (channel.name === channelName) {
-          const inviteChannelMsgId = uuidv4();
           const msg = {
-            messageID: inviteChannelMsgId,
             method: "CREATE",
             permission: {
               channelID: channel.channelID,
               powerLevel: 0,
               userID: identifier,
             },
+            transmissionID: uuidv4(),
             type: "channelPerm",
           };
           this.connector?.getWs()?.send(JSON.stringify(msg));
@@ -175,16 +174,16 @@ export class InputTaker extends EventEmitter {
       const idParts = identifier.split("#");
       if (idParts) {
         const [username, userTag] = idParts;
-        const messageID = uuidv4();
+        const transmissionID = uuidv4();
         const userInfoMsg = {
-          messageID,
           method: "RETRIEVE",
+          transmissionID,
           type: "userInfo",
           userTag,
           username,
         };
 
-        this.connector?.subscribe(messageID, (jsonMessage: any) => {
+        this.connector?.subscribe(transmissionID, (jsonMessage: any) => {
           if (jsonMessage.matchList.length > 1) {
             console.log(
               `Multiple users match tag. Please use the user's exact UUID instead.`
@@ -197,15 +196,14 @@ export class InputTaker extends EventEmitter {
           let channelFound = false;
           for (const channel of this.connector!.channelList) {
             if (channel.name === channelName) {
-              const inviteChannelMsgId = uuidv4();
               const msg = {
-                messageID: inviteChannelMsgId,
                 method,
                 permission: {
                   channelID: channel.channelID,
                   powerLevel: 0,
                   userID,
                 },
+                transmissionID: uuidv4(),
                 type: "channelPerm",
               };
               this.connector?.getWs()?.send(JSON.stringify(msg));
@@ -360,8 +358,9 @@ export class InputTaker extends EventEmitter {
     const chatMessage = {
       channelID: this.connector?.connectedChannelId,
       message,
-      messageID: uuidv4(),
       method: "CREATE",
+      transmissionID: uuidv4(),
+
       type: "chat",
     };
     this.connector?.getWs()?.send(JSON.stringify(chatMessage));
@@ -410,27 +409,31 @@ export class InputTaker extends EventEmitter {
           const idParts = userTag.split("#");
           if (idParts) {
             const [username, hexTag] = idParts;
-            const messageID = uuidv4();
+            const transmissionID = uuidv4();
             const userInfoMsg = {
-              messageID,
               method: "RETRIEVE",
+              transmissionID,
+
               type: "userInfo",
               userTag: hexTag,
               username,
             };
 
-            this.connector.subscribe(messageID, async (jsonMessage: any) => {
-              if (jsonMessage.matchList.length > 1) {
-                console.log(
-                  `Multiple users match tag. Please use the user's exact UUID instead.`
-                );
-                return;
-              }
-              const [usr] = jsonMessage.matchList;
-              const { userID } = usr;
+            this.connector.subscribe(
+              transmissionID,
+              async (jsonMessage: any) => {
+                if (jsonMessage.matchList.length > 1) {
+                  console.log(
+                    `Multiple users match tag. Please use the user's exact UUID instead.`
+                  );
+                  return;
+                }
+                const [usr] = jsonMessage.matchList;
+                const { userID } = usr;
 
-              this.opUser(userID, Number(powerLevel));
-            });
+                this.opUser(userID, Number(powerLevel));
+              }
+            );
 
             this.connector.getWs()?.send(JSON.stringify(userInfoMsg));
           }
@@ -455,27 +458,31 @@ export class InputTaker extends EventEmitter {
           const idParts = banID.split("#");
           if (idParts) {
             const [username, hexTag] = idParts;
-            const messageID = uuidv4();
+            const transmissionID = uuidv4();
             const userInfoMsg = {
-              messageID,
               method: "RETRIEVE",
+              transmissionID,
+
               type: "userInfo",
               userTag: hexTag,
               username,
             };
 
-            this.connector.subscribe(messageID, async (jsonMessage: any) => {
-              if (jsonMessage.matchList.length > 1) {
-                console.log(
-                  `Multiple users match tag. Please use the user's exact UUID instead.`
-                );
-                return;
-              }
-              const [usr] = jsonMessage.matchList;
-              const { userID } = usr;
+            this.connector.subscribe(
+              transmissionID,
+              async (jsonMessage: any) => {
+                if (jsonMessage.matchList.length > 1) {
+                  console.log(
+                    `Multiple users match tag. Please use the user's exact UUID instead.`
+                  );
+                  return;
+                }
+                const [usr] = jsonMessage.matchList;
+                const { userID } = usr;
 
-              await this.sendKickMessage(userID, true);
-            });
+                await this.sendKickMessage(userID, true);
+              }
+            );
 
             this.connector.getWs()?.send(JSON.stringify(userInfoMsg));
           }
@@ -500,27 +507,31 @@ export class InputTaker extends EventEmitter {
           const idParts = ident.split("#");
           if (idParts) {
             const [username, hexTag] = idParts;
-            const messageID = uuidv4();
+            const transmissionID = uuidv4();
             const userInfoMsg = {
-              messageID,
               method: "RETRIEVE",
+              transmissionID,
+
               type: "userInfo",
               userTag: hexTag,
               username,
             };
 
-            this.connector.subscribe(messageID, async (jsonMessage: any) => {
-              if (jsonMessage.matchList.length > 1) {
-                console.log(
-                  `Multiple users match tag. Please use the user's exact UUID instead.`
-                );
-                return;
-              }
-              const [usr] = jsonMessage.matchList;
-              const { userID } = usr;
+            this.connector.subscribe(
+              transmissionID,
+              async (jsonMessage: any) => {
+                if (jsonMessage.matchList.length > 1) {
+                  console.log(
+                    `Multiple users match tag. Please use the user's exact UUID instead.`
+                  );
+                  return;
+                }
+                const [usr] = jsonMessage.matchList;
+                const { userID } = usr;
 
-              await this.sendKickMessage(userID);
-            });
+                await this.sendKickMessage(userID);
+              }
+            );
 
             this.connector.getWs()?.send(JSON.stringify(userInfoMsg));
           }
@@ -583,8 +594,9 @@ export class InputTaker extends EventEmitter {
         if (reqParts) {
           const [username, hexTag] = reqParts;
           const userInfoMsg = {
-            messageID: uuidv4(),
             method: "RETRIEVE",
+            transmissionID: uuidv4(),
+
             type: "userInfo",
             userTag: hexTag,
             username,
@@ -598,8 +610,9 @@ export class InputTaker extends EventEmitter {
         } else {
           const leaveMsg = {
             channelID: this.connector?.connectedChannelId,
-            messageID: uuidv4(),
             method: "LEAVE",
+            transmissionID: uuidv4(),
+
             type: "channel",
           };
           this.connector.getWs()?.send(JSON.stringify(leaveMsg));
@@ -622,8 +635,9 @@ export class InputTaker extends EventEmitter {
         if (this.connector?.connectedChannelId) {
           const leaveMsg = {
             channelID: this.connector?.connectedChannelId,
-            messageID: uuidv4(),
             method: "LEAVE",
+            transmissionID: uuidv4(),
+
             type: "channel",
           };
           this.connector.getWs()?.send(JSON.stringify(leaveMsg));
@@ -638,11 +652,12 @@ export class InputTaker extends EventEmitter {
             channel.name === id ||
             channel.channelID === id
           ) {
-            const joinChannelMsgId = uuidv4();
+            const transmissionID = uuidv4();
             const msg = {
               channelID: channel.channelID,
-              messageID: joinChannelMsgId,
               method: "JOIN",
+              transmissionID,
+
               type: "channel",
             };
             this.connector?.getWs()?.send(JSON.stringify(msg));
@@ -690,11 +705,11 @@ export class InputTaker extends EventEmitter {
             break;
           }
           const channelID = commandArgs.shift();
-          const msgID = uuidv4();
+          const transmissionID = uuidv4();
           const message = {
             channelID,
-            messageID: msgID,
             method: "DELETE",
+            transmissionID,
             type: "channel",
           };
           this.connector?.getWs()?.send(JSON.stringify(message));
@@ -707,16 +722,16 @@ export class InputTaker extends EventEmitter {
           } else {
             const privateChannel = commandArgs.includes("--private");
 
-            const newChannelMsgId = uuidv4();
+            const transmissionID = uuidv4();
             const message = {
-              messageID: newChannelMsgId,
               method: "CREATE",
               name: commandArgs.shift(),
               privateChannel,
+              transmissionID,
               type: "channel",
             };
 
-            this.connector?.subscribe(newChannelMsgId, (newMsg: any) => {
+            this.connector?.subscribe(transmissionID, (newMsg: any) => {
               console.log(newMsg.status);
             });
 

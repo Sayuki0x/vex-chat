@@ -89,17 +89,17 @@ export class Connector extends EventEmitter {
   }
 
   public async register() {
-    const messageID = uuidv4();
+    const transmissionID = uuidv4();
 
-    this.subscribe(messageID, async (msg: any) => {
+    this.subscribe(transmissionID, async (msg: any) => {
       const { uuid } = msg;
       const resID = uuidv4();
 
       const regMsg = {
-        messageID: resID,
         method: "REGISTER",
         pubkey: toHexString(keyring.getPub()),
         signed: toHexString(keyring.sign(decodeUTF8(uuid))),
+        transmissionID: resID,
         type: "identity",
         uuid,
       };
@@ -119,8 +119,8 @@ export class Connector extends EventEmitter {
     });
 
     const registerMessage = {
-      messageID,
       method: "CREATE",
+      transmissionID,
       type: "identity",
     };
     this.getWs()?.send(JSON.stringify(registerMessage));
@@ -134,8 +134,9 @@ export class Connector extends EventEmitter {
   public getChannelList() {
     const listChannelMsgId = uuidv4();
     const msg = {
-      messageID: listChannelMsgId,
       method: "RETRIEVE",
+      transmissionID: listChannelMsgId,
+
       type: "channel",
     };
 
@@ -169,17 +170,19 @@ export class Connector extends EventEmitter {
       pubkey = serverQuery[0].pubkey;
     }
 
-    const messageID = uuidv4();
+    const transmissionID = uuidv4();
+    const challenge = uuidv4();
     const challengeMessage = {
-      messageID,
+      challenge,
       pubkey: toHexString(keyring.getPub()),
+      transmissionID,
       type: "challenge",
     };
 
-    this.subscribe(messageID, async (msg: any) => {
+    this.subscribe(transmissionID, async (msg: any) => {
       if (
         keyring.verify(
-          decodeUTF8(msg.messageID),
+          decodeUTF8(challenge),
           fromHexString(msg.response),
           // prefer database pubkey but fall through to msg pubkey for new servers
           fromHexString(pubkey || msg.pubkey)
@@ -244,16 +247,16 @@ export class Connector extends EventEmitter {
       }
     }
 
-    const msgId = uuidv4();
+    const transID = uuidv4();
     const historyReqMessage = {
       channelID: this.connectedChannelId,
-      messageID: msgId,
       method: "RETRIEVE",
       topMessage,
+      transmissionID: transID,
       type: "historyReq",
     };
 
-    this.subscribe(msgId, () => {
+    this.subscribe(transID, () => {
       this.historyRetrieved = true;
     });
 
@@ -285,7 +288,7 @@ export class Connector extends EventEmitter {
       this.subscribe(pongID, () => {
         this.serverAlive = true;
       });
-      this.ws?.send(JSON.stringify({ type: "ping", messageID: pongID }));
+      this.ws?.send(JSON.stringify({ type: "ping", transmissionID: pongID }));
     }, 10000);
   }
 
@@ -327,8 +330,9 @@ export class Connector extends EventEmitter {
         jsonMessage = JSON.parse(msg);
 
         for (const message of this.subscriptions) {
-          if (message.id === jsonMessage.messageID) {
+          if (message.id === jsonMessage.transmissionID) {
             await message.callback(jsonMessage);
+            this.subscriptions.splice(this.subscriptions.indexOf(message), 1);
             return;
           }
         }
@@ -404,7 +408,7 @@ export class Connector extends EventEmitter {
               deleted_at: jsonMessage.DeletedAt,
               id: jsonMessage.ID,
               message: jsonMessage.message,
-              message_id: jsonMessage.messageID,
+              message_id: jsonMessage.transmissionID,
               server: this.host,
               updated_at: jsonMessage.UpdatedAt,
               user_id: jsonMessage.userID,
@@ -425,8 +429,9 @@ export class Connector extends EventEmitter {
                 const joinChannelMsgId = uuidv4();
                 const joinMsg = {
                   channelID: channel.channelID,
-                  messageID: joinChannelMsgId,
                   method: "JOIN",
+                  transmissionID: joinChannelMsgId,
+
                   type: "channel",
                 };
                 this.getWs()?.send(JSON.stringify(joinMsg));
@@ -480,11 +485,11 @@ export class Connector extends EventEmitter {
           break;
         case "challenge":
           const challengeResponse = {
-            messageID: uuidv4(),
             pubkey: toHexString(keyring.getPub()),
             response: toHexString(
-              keyring.sign(decodeUTF8(jsonMessage.messageID))
+              keyring.sign(decodeUTF8(jsonMessage.challenge))
             ),
+            transmissionID: uuidv4(),
             type: "challengeRes",
           };
           this.getWs()?.send(JSON.stringify(challengeResponse));
