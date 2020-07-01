@@ -323,9 +323,7 @@ export class InputTaker extends EventEmitter {
       readline.cursorTo(process.stdin, 0);
       if (
         this.connector?.user?.username &&
-        msg.message
-          .toUpperCase()
-          .includes(this.connector?.user?.username.toUpperCase())
+        msg.message.includes(this.connector?.user?.username)
       ) {
         if (
           this.connector?.historyRetrieved &&
