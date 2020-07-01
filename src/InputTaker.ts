@@ -80,12 +80,12 @@ export class InputTaker extends EventEmitter {
     let coloredMessage: string | null = null;
 
     if (
-      jsonMessage.message.includes(this.connector?.user?.Username!) &&
+      jsonMessage.message.includes(this.connector?.user?.username!) &&
       jsonMessage.username !== "Server Message"
     ) {
       coloredMessage = (jsonMessage.message as string).replace(
-        this.connector?.user?.Username!,
-        chalk.white.bgRedBright.bold(this.connector?.user?.Username!)
+        this.connector?.user?.username!,
+        chalk.white.bgRedBright.bold(this.connector?.user?.username!)
       );
     }
 
@@ -192,7 +192,7 @@ export class InputTaker extends EventEmitter {
             return;
           }
           const [usr] = jsonMessage.matchList;
-          const { UUID } = usr;
+          const { userID } = usr;
 
           let channelFound = false;
           for (const channel of this.connector!.channelList) {
@@ -204,7 +204,7 @@ export class InputTaker extends EventEmitter {
                 permission: {
                   channelID: channel.channelID,
                   powerLevel: 0,
-                  userID: UUID,
+                  userID,
                 },
                 type: "channelPerm",
               };
@@ -323,10 +323,10 @@ export class InputTaker extends EventEmitter {
       readline.clearLine(process.stdin, -1);
       readline.cursorTo(process.stdin, 0);
       if (
-        this.connector?.user?.Username &&
+        this.connector?.user?.username &&
         msg.message
           .toUpperCase()
-          .includes(this.connector?.user?.Username.toUpperCase())
+          .includes(this.connector?.user?.username.toUpperCase())
       ) {
         if (
           this.connector?.historyRetrieved &&
@@ -367,6 +367,17 @@ export class InputTaker extends EventEmitter {
     this.connector?.getWs()?.send(JSON.stringify(chatMessage));
   }
 
+  private async opUser(userID: string, powerLevel: number) {
+    const opMessage = {
+      method: "UPDATE",
+      powerLevel,
+      type: "user",
+      userID,
+    };
+
+    this.connector?.getWs()?.send(JSON.stringify(opMessage));
+  }
+
   private async action(command: string) {
     const commandArgs = command.split(" ");
 
@@ -380,31 +391,31 @@ export class InputTaker extends EventEmitter {
     readline.clearLine(process.stdin, 1);
 
     switch (baseCommand) {
-      case "/ban":
+      case "/op":
         if (!this.connector || !this.connector.handshakeStatus) {
           console.log(
             `You're not logged in to a server! Connect first with /connect\n`
           );
           break;
         }
-        if (commandArgs.length < 1) {
-          console.log("/kick requires a usertag or userID argument.");
+        if (commandArgs.length < 2) {
+          console.log("/op requires a usertag and a powerlevel argument.");
           break;
         }
-        const [banID] = commandArgs;
+        const [userTag, powerLevel] = commandArgs;
 
-        if (isValidUUID(banID)) {
-          await this.sendKickMessage(banID, true);
+        if (isValidUUID(userTag)) {
+          this.opUser(userTag, Number(powerLevel));
         } else {
-          const idParts = banID.split("#");
+          const idParts = userTag.split("#");
           if (idParts) {
-            const [username, userTag] = idParts;
+            const [username, hexTag] = idParts;
             const messageID = uuidv4();
             const userInfoMsg = {
               messageID,
               method: "RETRIEVE",
               type: "userInfo",
-              userTag,
+              userTag: hexTag,
               username,
             };
 
@@ -416,9 +427,54 @@ export class InputTaker extends EventEmitter {
                 return;
               }
               const [usr] = jsonMessage.matchList;
-              const { UUID } = usr;
+              const { userID } = usr;
 
-              await this.sendKickMessage(UUID, true);
+              this.opUser(userID, Number(powerLevel));
+            });
+
+            this.connector.getWs()?.send(JSON.stringify(userInfoMsg));
+          }
+        }
+        break;
+      case "/ban":
+        if (!this.connector || !this.connector.handshakeStatus) {
+          console.log(
+            `You're not logged in to a server! Connect first with /connect\n`
+          );
+          break;
+        }
+        if (commandArgs.length < 1) {
+          console.log("/ban requires a usertag or userID argument.");
+          break;
+        }
+        const [banID] = commandArgs;
+
+        if (isValidUUID(banID)) {
+          await this.sendKickMessage(banID, true);
+        } else {
+          const idParts = banID.split("#");
+          if (idParts) {
+            const [username, hexTag] = idParts;
+            const messageID = uuidv4();
+            const userInfoMsg = {
+              messageID,
+              method: "RETRIEVE",
+              type: "userInfo",
+              userTag: hexTag,
+              username,
+            };
+
+            this.connector.subscribe(messageID, async (jsonMessage: any) => {
+              if (jsonMessage.matchList.length > 1) {
+                console.log(
+                  `Multiple users match tag. Please use the user's exact UUID instead.`
+                );
+                return;
+              }
+              const [usr] = jsonMessage.matchList;
+              const { userID } = usr;
+
+              await this.sendKickMessage(userID, true);
             });
 
             this.connector.getWs()?.send(JSON.stringify(userInfoMsg));
@@ -443,13 +499,13 @@ export class InputTaker extends EventEmitter {
         } else {
           const idParts = ident.split("#");
           if (idParts) {
-            const [username, userTag] = idParts;
+            const [username, hexTag] = idParts;
             const messageID = uuidv4();
             const userInfoMsg = {
               messageID,
               method: "RETRIEVE",
               type: "userInfo",
-              userTag,
+              userTag: hexTag,
               username,
             };
 
@@ -461,9 +517,9 @@ export class InputTaker extends EventEmitter {
                 return;
               }
               const [usr] = jsonMessage.matchList;
-              const { UUID } = usr;
+              const { userID } = usr;
 
-              await this.sendKickMessage(UUID);
+              await this.sendKickMessage(userID);
             });
 
             this.connector.getWs()?.send(JSON.stringify(userInfoMsg));
@@ -525,12 +581,12 @@ export class InputTaker extends EventEmitter {
         const reqParts = commandArgs.shift()?.split("#");
 
         if (reqParts) {
-          const [username, userTag] = reqParts;
+          const [username, hexTag] = reqParts;
           const userInfoMsg = {
             messageID: uuidv4(),
             method: "RETRIEVE",
             type: "userInfo",
-            userTag,
+            userTag: hexTag,
             username,
           };
           this.connector.getWs()?.send(JSON.stringify(userInfoMsg));
@@ -578,7 +634,7 @@ export class InputTaker extends EventEmitter {
         let foundChannel = false;
         for (const channel of this.connector!.channelList) {
           if (
-            channel.ID === Number(id) ||
+            channel.index === Number(id) ||
             channel.name === id ||
             channel.channelID === id
           ) {
@@ -610,7 +666,7 @@ export class InputTaker extends EventEmitter {
         }
         break;
       case "/help":
-        printHelp(this.connector?.user?.PowerLevel || undefined);
+        printHelp(this.connector?.user?.powerLevel || undefined);
         break;
       case "/channel":
         if (!this.connector || !this.connector.handshakeStatus) {
@@ -691,13 +747,12 @@ export class InputTaker extends EventEmitter {
 
           const userMessage = {
             channelID: this.connector?.connectedChannelId,
-            method: "UPDATE",
+            method: "NICK",
             type: "user",
             username,
           };
           this.connector?.getWs()?.send(JSON.stringify(userMessage));
         }
-
         break;
       case "/license":
         printLicense(true);

@@ -16,21 +16,14 @@ interface ISubscription {
 }
 
 interface IClient {
-  ID: number;
-  CreatedAt: string;
-  UpdatedAt: string;
-  DeletedAt: string | null;
-  PubKey: string;
-  Username: string;
-  PowerLevel: number;
-  UUID: string;
+  pubkey: string;
+  username: string;
+  powerLevel: number;
+  userID: string;
 }
 
 interface IChannel {
-  ID: number;
-  CreatedAt: string;
-  UpdatedAt: string;
-  DeletedAt: string;
+  index: number;
   channelID: string;
   admin: string;
   public: boolean;
@@ -281,7 +274,7 @@ export class Connector extends EventEmitter {
       } else {
         failedCount = 0;
       }
-      if (failedCount > 3) {
+      if (failedCount > 6) {
         failedCount = 0;
         this.emit("unresponsive", this.connectedChannelId);
         this.close();
@@ -363,15 +356,17 @@ export class Connector extends EventEmitter {
             );
             for (const user of jsonMessage.matchList) {
               console.log(
-                normalizeStrLen(chalk.bold("Username"), 25) + user.Username
+                normalizeStrLen(chalk.bold("Username"), 25) + user.username
               );
               console.log(
-                normalizeStrLen(chalk.bold("Pubkey"), 25) + user.PubKey
+                normalizeStrLen(chalk.bold("Pubkey"), 25) + user.pubkey
               );
-              console.log(normalizeStrLen(chalk.bold("UUID"), 25) + user.UUID);
+              console.log(
+                normalizeStrLen(chalk.bold("UUID"), 25) + user.userID
+              );
               console.log(
                 normalizeStrLen(chalk.bold("Power Level"), 25) +
-                  user.PowerLevel.toString()
+                  user.powerLevel.toString()
               );
             }
             process.stdout.write("\n");
@@ -441,12 +436,14 @@ export class Connector extends EventEmitter {
           }
           if (jsonMessage.channels.length > 0) {
             console.log(chalk.bold("CHANNEL LIST"));
-            for (const channel of jsonMessage.channels) {
+            for (const channel of jsonMessage.channels as IChannel[]) {
               console.log(
-                `${normalizeStrLen(channel.ID.toString(), 4)} ${normalizeStrLen(
-                  channel.name,
-                  12
-                )} ${channel.channelID}    ${channel.public ? "" : "🔑"}`
+                `${normalizeStrLen(
+                  channel.index.toString(),
+                  4
+                )} ${normalizeStrLen(channel.name, 12)} ${
+                  channel.channelID
+                }    ${channel.public ? "" : "🔑"}`
               );
             }
             console.log(
