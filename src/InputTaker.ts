@@ -243,9 +243,13 @@ export class InputTaker extends EventEmitter {
             url
           )}\n`,
         }).start();
-        await sleep(5000);
       }
     }
+
+    if (reconnect) {
+      await sleep(5000);
+    }
+
     const components = url.split(":");
     let port = 8000;
     let host = "localhost";
@@ -268,12 +272,6 @@ export class InputTaker extends EventEmitter {
       channelConnectID || undefined
     );
     connector.on("failure", (err) => {
-      if (reconnect) {
-        this.connector?.close();
-        this.connector?.emit("unresponsive", channelConnectID);
-        this.connector = null;
-        return;
-      }
       if (err) {
         if (this.spinner) {
           this.spinner.fail(
@@ -291,6 +289,7 @@ export class InputTaker extends EventEmitter {
           console.log("An error occurred: " + chalk.red.bold(`${err.code}\n`));
         }
       }
+
       this.connector?.close();
       this.connector = null;
     });
@@ -316,6 +315,7 @@ export class InputTaker extends EventEmitter {
       }
     });
     connector.on("unresponsive", async (cID: string) => {
+      this.connector = null;
       this.handleConnect(url, true, cID);
     });
 
