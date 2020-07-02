@@ -91,6 +91,11 @@ const helpItems: IHelpItem[] = [
     description: "Change your nickname",
     powerLevel: 0,
   },
+  {
+    command: "/version",
+    description: "Displays current version information.",
+    powerLevel: 0,
+  },
 ];
 
 export function printHelpItem(item: IHelpItem, powerLevel: number = 0) {
