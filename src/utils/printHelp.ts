@@ -88,7 +88,7 @@ const helpItems: IHelpItem[] = [
   },
   {
     command: "/nick <nickname>",
-    description: "Change your nickname",
+    description: "Changes your nickname.",
     powerLevel: 0,
   },
   {
