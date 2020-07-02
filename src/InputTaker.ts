@@ -556,6 +556,14 @@ export class InputTaker extends EventEmitter {
           shell: true,
           stdio: "inherit",
         });
+
+        outdated.on("close", (code: number) => {
+          if (code !== 0) {
+            console.log(
+              chalk.red.bold("vex-chat is out of date. Please run /upgrade")
+            );
+          }
+        });
         break;
       case "/upgrade":
         console.log(
