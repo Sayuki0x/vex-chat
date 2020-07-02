@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import { exec } from "child_process";
+import { exec, spawn } from "child_process";
 import { EventEmitter } from "events";
 import moment from "moment";
 import ora from "ora";
@@ -544,36 +544,42 @@ export class InputTaker extends EventEmitter {
       case "/revoke":
         this.channelPerm(commandArgs, "DELETE");
         break;
+      case "/version":
+        console.log(
+          "Getting version information from " + chalk.magenta.bold("npm")
+        );
+        const version = spawn("npm", ["ls", "-g", "vex-chat"], {
+          shell: true,
+          stdio: "inherit",
+        });
+        const outdated = spawn("npm", ["outdated", "-g", "vex-chat"], {
+          shell: true,
+          stdio: "inherit",
+        });
+        break;
       case "/upgrade":
         console.log(
-          "Exit the program and use " +
-            chalk.bold("npm i -g vex-chat") +
-            " to upgrade.\n"
+          "Calling " + chalk.magenta.bold("npm") + " to upgrade vex-chat."
         );
-        // console.log(
-        //   "Calling " +
-        //     chalk.magenta.bold("NPM") +
-        //     " to upgrade vex-chat. Please don't CTRL+C until process is finished."
-        // );
-        // const npm = spawn("npm", ["i", "-g", "vex-chat"], {
-        //   shell: true,
-        //   stdio: "inherit",
-        // });
-        // npm.on("close", (code: number) => {
-        //   if (code !== 0) {
-        //     console.log(
-        //       chalk.red.bold(`vex-chat upgrade failed`) +
-        //         ` with exit code ${code}.\n`
-        //     );
-        //   } else {
-        //     console.log(
-        //       chalk.green.bold("vex-chat upgrade success.") +
-        //         " It must be restarted to use new update, use " +
-        //         chalk.bold("/exit") +
-        //         "\n"
-        //     );
-        //   }
-        // });
+        const npm = spawn("npm", ["i", "-g", "vex-chat"], {
+          shell: true,
+          stdio: "inherit",
+        });
+        npm.on("close", (code: number) => {
+          if (code !== 0) {
+            console.log(
+              chalk.red.bold(`vex-chat upgrade failed`) +
+                ` with exit code ${code}.\n`
+            );
+          } else {
+            console.log(
+              chalk.green.bold("vex-chat upgrade success.") +
+                " It must be restarted to use new update, use " +
+                chalk.bold("/exit") +
+                "\n"
+            );
+          }
+        });
         break;
       case "/lookup":
         if (!this.connector || !this.connector.handshakeStatus) {
