@@ -309,12 +309,14 @@ export class InputTaker extends EventEmitter {
       if (reconnect) {
         return;
       } else {
-        this.connector?.emit("unresponsive");
+        this.connector?.emit(
+          "unresponsive",
+          this.connector.connectedChannelId || undefined
+        );
       }
     });
     connector.on("unresponsive", async (cID: string) => {
       this.connector?.close();
-      this.connector = null;
       this.handleConnect(url, true, cID);
     });
 
