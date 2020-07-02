@@ -561,12 +561,12 @@ export class InputTaker extends EventEmitter {
         outdated.on("close", (code: number) => {
           if (code !== 0) {
             console.log(
-              chalk.red.bold("vex-chat is out of date. Please run /upgrade")
+              chalk.red.bold("vex-chat is out of date. Please run /upgrade\n")
             );
           } else {
             console.log(
               chalk.green.bold(
-                "You're running the latest version. You're good to go!"
+                "You're running the latest version. You're good to go!\n"
               )
             );
           }
@@ -575,9 +575,9 @@ export class InputTaker extends EventEmitter {
       case "/upgrade":
         if (os.version().includes("Microsoft")) {
           console.log(
-            "Unfortunately, in-app upgrade is broken on WSL. Please exit and run " +
+            "Unfortunately, in-app upgrade is broken on WSL. Please /exit and run " +
               chalk.bold("npm i -g vex-chat") +
-              " to upgrade."
+              " to upgrade.\n"
           );
           break;
         }
