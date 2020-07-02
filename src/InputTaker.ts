@@ -3,6 +3,7 @@ import { exec, spawn } from "child_process";
 import { EventEmitter } from "events";
 import moment from "moment";
 import ora from "ora";
+import os from "os";
 import readline, { createInterface } from "readline";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "./cli";
@@ -572,6 +573,15 @@ export class InputTaker extends EventEmitter {
         });
         break;
       case "/upgrade":
+        if (os.version().includes("Microsoft")) {
+          console.log(
+            "Unfortunately, in-app upgrade is broken on WSL. Please exit and run " +
+              chalk.bold("npm i -g vex-chat") +
+              " to upgrade."
+          );
+          break;
+        }
+
         console.log(
           "Calling " + chalk.magenta.bold("npm") + " to upgrade vex-chat."
         );
