@@ -562,6 +562,12 @@ export class InputTaker extends EventEmitter {
             console.log(
               chalk.red.bold("vex-chat is out of date. Please run /upgrade")
             );
+          } else {
+            console.log(
+              chalk.green.bold(
+                "You're running the latest version. You're good to go!"
+              )
+            );
           }
         });
         break;
