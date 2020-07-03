@@ -349,6 +349,7 @@ export class InputTaker extends EventEmitter {
   private async sendKickMessage(userID: string, ban: boolean = false) {
     const kickMessage = {
       method: ban ? "BAN" : "KICK",
+      transmissionID: uuidv4(),
       type: "user",
       userID,
     };
@@ -362,7 +363,6 @@ export class InputTaker extends EventEmitter {
       message,
       method: "CREATE",
       transmissionID: uuidv4(),
-
       type: "chat",
     };
     this.connector?.getWs()?.send(JSON.stringify(chatMessage));
@@ -372,6 +372,7 @@ export class InputTaker extends EventEmitter {
     const opMessage = {
       method: "UPDATE",
       powerLevel,
+      transmissionID: uuidv4(),
       type: "user",
       userID,
     };
@@ -415,7 +416,6 @@ export class InputTaker extends EventEmitter {
             const userInfoMsg = {
               method: "RETRIEVE",
               transmissionID,
-
               type: "userInfo",
               userTag: hexTag,
               username,
@@ -736,6 +736,15 @@ export class InputTaker extends EventEmitter {
             break;
           }
           const channelID = commandArgs.shift();
+
+          if (!isValidUUID(channelID!)) {
+            console.log(
+              chalk.yellow.bold(
+                "/channel delete requires the full unique ID of the channel."
+              )
+            );
+          }
+
           const transmissionID = uuidv4();
           const message = {
             channelID,
