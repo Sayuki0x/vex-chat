@@ -799,6 +799,7 @@ export class InputTaker extends EventEmitter {
           const userMessage = {
             channelID: this.connector?.connectedChannelId,
             method: "NICK",
+            transmissionID: uuidv4(),
             type: "user",
             username,
           };
