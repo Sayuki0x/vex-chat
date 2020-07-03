@@ -24,7 +24,7 @@ export class InputTaker extends EventEmitter {
   constructor() {
     super();
     this.rl = createInterface({
-      historySize: 0,
+      historySize: 100,
       input: process.stdin,
       output: process.stdout,
       prompt: "",
@@ -75,7 +75,7 @@ export class InputTaker extends EventEmitter {
   }
 
   private printMessage(jsonMessage: any, serverMessage: boolean) {
-    const createdAt = moment(jsonMessage.CreatedAt || jsonMessage.created_at);
+    const createdAt = moment(jsonMessage.createdAt || jsonMessage.created_at);
     const timestamp = `${createdAt.format("HH:mm:ss")} › `;
 
     let coloredMessage: string | null = null;
